@@ -167,7 +167,7 @@ int protocol_parse_notification(const uint8_t *frame_data, size_t frame_length, 
     frame_out->cmd_type = frame_data[3];
     frame_out->enc = frame_data[4];
     memcpy(frame_out->res, &frame_data[5], 3);
-    frame_out->seq = (frame_data[8] << 8) | frame_data[9];
+    frame_out->seq = (frame_data[9] << 8) | frame_data[8];
     frame_out->crc16 = crc16_received;
 
     // Process data segment (DATA)
@@ -347,10 +347,10 @@ uint8_t* protocol_create_frame(uint8_t cmd_set, uint8_t cmd_id, uint8_t cmd_type
 
     // Sequence number
     // 序列号
-    frame[offset++] = (seq >> 8) & 0xFF; // High byte of sequence number
-                                         // 序列号高字节
     frame[offset++] = seq & 0xFF;        // Low byte of sequence number
                                          // 序列号低字节
+    frame[offset++] = (seq >> 8) & 0xFF; // High byte of sequence number
+                                         // 序列号高字节
 
     // Calculate and fill CRC-16 (covers from SOF to SEQ)
     // 计算并填充 CRC-16（覆盖从 SOF 到 SEQ）
