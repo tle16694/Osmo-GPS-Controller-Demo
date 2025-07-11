@@ -83,3 +83,7 @@ For detailed implementation, refer to the **Key Reporting (0011)** feature in th
 - In slow-motion mode, magnification equals frame rate divided by 30.
 - In motion timelapse mode, magnification equals the time interval.
 - In static timelapse mode, there is no magnification display—only the interval time is shown.
+
+## 8. UI Design Corresponding to Camera Modes
+
+Reference: Please refer to the **Camera Status Push (1D02)** function in the [DATA Segment Detailed Documentation](protocol_data_segment.md), which provides detailed explanations on how parameters are displayed and mapped to frame fields under different camera modes.

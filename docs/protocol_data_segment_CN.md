@@ -162,7 +162,7 @@ CmdSet = 0x1D，CmdID = 0x04
 
 **帧结构举例**：
 
-例如，切换相机至：延时摄影模式2 动态延时，构造的 DJI R SDK 协议帧如下：
+例如，切换相机至：动态延时，构造的 DJI R SDK 协议帧如下：
 
 ByteArray：[AA, 1B, 00, 01, 00, 00, 00, 00, 00, 03, 14, BF, 1D, 04, 00, 00, FF, 33, 0A, 01, 47, 39, 36, 92, A1, 09, 55]
 
@@ -249,11 +249,11 @@ CmdSet = 0x1D，CmdID = 0x02
 
 **【重点】关于不同相机模式下，参数如何显示，如何与 `camera_mode` 对应，参考如下**：
 
-* camera_mode = 0x00（慢动作）
+* `camera_mode` = 0x00（慢动作）
 
   <img title="Slow Motion UI Design" src="images/camera_mode_ui_design/slow_motion.png" alt="Slow Motion UI Design" data-align="center" width="300">
 
-* camera_mode = 0x01（视频）
+* `camera_mode` = 0x01（视频）
 
   视频、循环录像（`loop_record_sends` 字段不为 0 就是在循环）：
 
@@ -263,37 +263,37 @@ CmdSet = 0x1D，CmdID = 0x02
 
   <img title="Video Mode 2" src="images/camera_mode_ui_design/video_2.png" alt="Video Mode 2" data-align="center" width="400">
 
-* camera_mode = 0x02（静止延时）
+* `camera_mode` = 0x02（静止延时）
 
   <img title="Still Time-lapse" src="images/camera_mode_ui_design/still_time_lapse.png" alt="Still Time-lapse" data-align="center" width="400">
 
-* camera_mode = 0x05（拍照）
+* `camera_mode` = 0x05（拍照）
 
   <img title="Photo" src="images/camera_mode_ui_design/photo.png" alt="Photo" data-align="center" width="650">
 
-  如果连拍张数 fps_idx 大于 1 说明处于连拍模式，显示如下：
+  如果连拍张数 `fps_idx` 大于 1 说明处于连拍模式，显示如下：
 
   <img title="Photo Continuous Shots" src="images/camera_mode_ui_design/photo_cs.png" alt="Photo Continuous Shots" data-align="center" width="400">
 
   L / M 相片尺寸详见 `video_resolution` 字段
 
-* camera_mode = 0x0A（动态延时）
+* `camera_mode` = 0x0A（动态延时）
 
   <img title="Dynamic Time-lapse" src="images/camera_mode_ui_design/dynamic_time_lapse.png" alt="Dynamic Time-lapse" data-align="center" width="260">
 
-* camera_mode = 0x28（低光视频，超级夜景）
+* `camera_mode` = 0x28（低光视频，超级夜景）
 
   参考 0x01 视频模式
 
-* camera_mode = 0x34（人物跟随）
+* `camera_mode` = 0x34（人物跟随）
 
   参考 0x05 拍照模式，但只显示分辨率、帧率、比例
 
-* camera_mode = 0x1A（直播）、0x23（UVC 直播）
+* `camera_mode` = 0x1A（直播）、0x23（UVC 直播）
 
   <img title="Live Stream" src="images/camera_mode_ui_design/livestream.png" alt="Live Stream" data-align="center" width="360">
 
-* 当 user_mode 不等于 0，为自定义模式
+* 当 `user_mode` 不等于 0，为自定义模式
 
   <img title="Custom Mode" src="images/camera_mode_ui_design/custom_mode.png" alt="Custom Mode" data-align="center" width="260">
 

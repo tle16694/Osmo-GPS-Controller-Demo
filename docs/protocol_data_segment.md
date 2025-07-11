@@ -156,7 +156,7 @@ CmdSet = 0x1D, CmdID = 0x04
 | Response Frame | 0      | 1    | ret_code | uint8_t    | 0: Successful switch<br/>Non-0: Switch failed |
 |                | 1      | 4    | reserved | uint8_t[4] | Reserved                                      |
 
-For example, switching the camera to: Time-lapse mode 2 Dynamic time-lapse, the constructed DJI R SDK frame is as follows:
+For example, switching the camera to: Dynamic Time-lapse mode, the constructed DJI R SDK frame is as follows:
 
 ByteArray: [AA, 1B, 00, 01, 00, 00, 00, 00, 00, 03, 14, BF, 1D, 04, 00, 00, FF, 33, 0A, 01, 47, 39, 36, 92, A1, 09, 55]
 
@@ -240,6 +240,56 @@ CmdSet = 0x1D, CmdID = 0x02
 1. In slow motion, the multiplier = frame rate / 30
 2. In motion time-lapse, the multiplier = time-lapse recording interval
 3. In static time-lapse, there is no multiplier displayed, only the interval time
+
+**For how parameters are displayed under different camera modes and how they correspond to `camera_mode`, please refer to the following:**
+
+* `camera_mode` = 0x00（Slow Motion）
+
+  <img title="Slow Motion UI Design" src="/Users/zachy.zhang/Documents/projects/Osmo-GPS-Controller-Demo/docs/images/camera_mode_ui_design/slow_motion.png" alt="Slow Motion UI Design" data-align="center" width="300">
+
+* `camera_mode` = 0x01（Video）
+
+  Video, loop recording (if the `loop_record_sends` field is not 0, loop recording is active):
+
+  <img title="Video Mode 1" src="/Users/zachy.zhang/Documents/projects/Osmo-GPS-Controller-Demo/docs/images/camera_mode_ui_design/video_1.png" alt="Video Mode 1" data-align="center" width="400">
+
+  Pre-recording：
+
+  <img title="Video Mode 2" src="/Users/zachy.zhang/Documents/projects/Osmo-GPS-Controller-Demo/docs/images/camera_mode_ui_design/video_2.png" alt="Video Mode 2" data-align="center" width="400">
+
+* `camera_mode` = 0x02（Still Time-lapse）
+
+  <img title="Still Time-lapse" src="/Users/zachy.zhang/Documents/projects/Osmo-GPS-Controller-Demo/docs/images/camera_mode_ui_design/still_time_lapse.png" alt="Still Time-lapse" data-align="center" width="400">
+
+* `camera_mode` = 0x05（Photo）
+
+  <img title="Photo" src="/Users/zachy.zhang/Documents/projects/Osmo-GPS-Controller-Demo/docs/images/camera_mode_ui_design/photo.png" alt="Photo" data-align="center" width="650">
+
+  If the number of continuous shots `fps_idx` is greater than 1, it indicates burst mode is active, and the display is as follows:
+
+  <img title="Photo Continuous Shots" src="/Users/zachy.zhang/Documents/projects/Osmo-GPS-Controller-Demo/docs/images/camera_mode_ui_design/photo_cs.png" alt="Photo Continuous Shots" data-align="center" width="400">
+
+  The L / M photo sizes are detailed in the `video_resolution` field.
+
+* `camera_mode` = 0x0A（Dynamic Time-lapse）
+
+  <img title="Dynamic Time-lapse" src="/Users/zachy.zhang/Documents/projects/Osmo-GPS-Controller-Demo/docs/images/camera_mode_ui_design/dynamic_time_lapse.png" alt="Dynamic Time-lapse" data-align="center" width="260">
+
+* `camera_mode` = 0x28（Low-light Video）
+
+  Refer to 0x01 Video Mode.
+
+* `camera_mode` = 0x34（Human Tracking）
+
+  Refer to 0x05 Photo Mode, but only display resolution, frame rate, and aspect ratio.
+
+* `camera_mode` = 0x1A（Live Mode）、0x23（UVC Live Mode）
+
+  <img title="Live Stream" src="images/camera_mode_ui_design/livestream.png" alt="Live Stream" data-align="center" width="360">
+
+* When `user_mode` is not equal to 0, it indicates a custom mode.
+
+  <img title="Custom Mode" src="/Users/zachy.zhang/Documents/projects/Osmo-GPS-Controller-Demo/docs/images/camera_mode_ui_design/custom_mode.png" alt="Custom Mode" data-align="center" width="260">
 
 ## Camera Power Mode Settings (001A)
 
