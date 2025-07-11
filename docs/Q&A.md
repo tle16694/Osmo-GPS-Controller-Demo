@@ -30,6 +30,8 @@ Reference code:
 #define REMOTE_WRITE_CHAR_UUID       0xFFF5
 ```
 
+After establishing the connection, only frames starting with `0xAA` need to be processed; all other broadcast packets can be ignored.
+
 ## 2. How to Put the Camera to Sleep and Wake It Up
 
 The camera can enter sleep mode either by long-pressing its power button or through remote controller operations. Long-pressing the record button on the remote controller will put the camera into sleep mode. While the camera is asleep, pressing any button will wake it up. If the record button is pressed, the camera will wake up and immediately start recording, then automatically return to sleep mode after recording is complete.

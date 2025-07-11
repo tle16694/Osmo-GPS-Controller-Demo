@@ -160,6 +160,8 @@ CmdSet = 0x1D，CmdID = 0x04
 | 应答帧 | 0    | 1    | ret_code | uint8_t    | 0：切换成功<br>非 0：切换失败 |
 |        | 1    | 4    | reserved | uint8_t[4] | 预留                          |
 
+**帧结构举例**：
+
 例如，切换相机至：延时摄影模式2 动态延时，构造的 DJI R SDK 协议帧如下：
 
 ByteArray：[AA, 1B, 00, 01, 00, 00, 00, 00, 00, 03, 14, BF, 1D, 04, 00, 00, FF, 33, 0A, 01, 47, 39, 36, 92, A1, 09, 55]
@@ -217,7 +219,7 @@ CmdSet = 0x1D，CmdID = 0x02
 
 | 帧类型 | 偏移 | 大小 | 名字                  | 类型     | 描述                                                         |
 | ------ | ---- | ---- | --------------------- | -------- | ------------------------------------------------------------ |
-| 命令帧 | 0    | 1    | camera_mode           | uint8_t  | 相机当前模式<br>0x00：慢动作模式<br>0x01：普通模式<br>0x02：延时摄影模式1 静止延时<br>0x05：普通拍照模式<br>0x0A：延时摄影模式2 动态延时<br>0x1A：直播模式<br>0x23：UVC 直播模式<br>0x28：低光视频（Action 5 Pro 中表示超极夜景）<br>0x34：智能跟随 |
+| 命令帧 | 0    | 1    | camera_mode           | uint8_t  | 相机当前模式<br>0x00：慢动作<br>0x01：视频<br>0x02：静止延时（延时摄影里选择）<br>0x05：拍照<br>0x0A：动态延时（延时摄影里选择）<br>0x1A：直播<br>0x23：UVC 直播<br>0x28：低光视频（Action 5 Pro 中为超极夜景）<br>0x34：人物跟随 |
 |        | 1    | 1    | camera_status         | uint8_t  | 相机状态<br>0x00：屏幕关闭<br>0x01：直播<br>0x02：回放<br>0x03：拍照或录像中<br>0x05：预录制中 |
 |        | 2    | 1    | video_resolution      | uint8_t  | 相机分辨率<br>10：1080P<br>16：4K 16:9<br>45：2.7K 16:9<br>66：1080P 9:16<br>67：2.7K 9:16<br>95：2.7K 4:3<br>103：4K 4:3<br>拍照画幅（Action 5 Pro）<br>4：L<br>3：M |
 |        | 3    | 1    | fps_idx               | uint8_t  | 相机帧率<br>1：24fps<br>2：25fps<br>3：30fps<br>4：48fps<br>5：50fps<br>6：60fps<br>10：100fps<br>7：120fps<br>19：200fps<br>8：240fps<br>慢动作模式时，该值指慢动作倍率，倍率 = 帧率 / 30<br>拍照模式时，该值指连拍数（1：普通拍照 ，只拍一张；\>1：连拍张数） |
@@ -244,6 +246,56 @@ CmdSet = 0x1D，CmdID = 0x02
 1. 慢动作下，倍率 = 帧率 / 30
 2. 运动延时下，倍率 = 延时摄影录像时间间隔
 3. 静止延时下，没有倍率显示，只有间隔时间
+
+**【重点】关于不同相机模式下，参数如何显示，如何与 `camera_mode` 对应，参考如下**：
+
+* camera_mode = 0x00（慢动作）
+
+  <img title="Slow Motion UI Design" src="images/camera_mode_ui_design/slow_motion.png" alt="Slow Motion UI Design" data-align="center" width="300">
+
+* camera_mode = 0x01（视频）
+
+  视频、循环录像（`loop_record_sends` 字段不为 0 就是在循环）：
+
+  <img title="Video Mode 1" src="images/camera_mode_ui_design/video_1.png" alt="Video Mode 1" data-align="center" width="400">
+
+  预录制：
+
+  <img title="Video Mode 2" src="images/camera_mode_ui_design/video_2.png" alt="Video Mode 2" data-align="center" width="400">
+
+* camera_mode = 0x02（静止延时）
+
+  <img title="Still Time-lapse" src="images/camera_mode_ui_design/still_time_lapse.png" alt="Still Time-lapse" data-align="center" width="400">
+
+* camera_mode = 0x05（拍照）
+
+  <img title="Photo" src="images/camera_mode_ui_design/photo.png" alt="Photo" data-align="center" width="650">
+
+  如果连拍张数 fps_idx 大于 1 说明处于连拍模式，显示如下：
+
+  <img title="Photo Continuous Shots" src="images/camera_mode_ui_design/photo_cs.png" alt="Photo Continuous Shots" data-align="center" width="400">
+
+  L / M 相片尺寸详见 `video_resolution` 字段
+
+* camera_mode = 0x0A（动态延时）
+
+  <img title="Dynamic Time-lapse" src="images/camera_mode_ui_design/dynamic_time_lapse.png" alt="Dynamic Time-lapse" data-align="center" width="260">
+
+* camera_mode = 0x28（低光视频，超级夜景）
+
+  参考 0x01 视频模式
+
+* camera_mode = 0x34（人物跟随）
+
+  参考 0x05 拍照模式，但只显示分辨率、帧率、比例
+
+* camera_mode = 0x1A（直播）、0x23（UVC 直播）
+
+  <img title="Live Stream" src="images/camera_mode_ui_design/livestream.png" alt="Live Stream" data-align="center" width="360">
+
+* 当 user_mode 不等于 0，为自定义模式
+
+  <img title="Custom Mode" src="images/camera_mode_ui_design/custom_mode.png" alt="Custom Mode" data-align="center" width="260">
 
 ## 相机电源模式设置（001A）
 
