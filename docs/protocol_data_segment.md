@@ -214,11 +214,11 @@ CmdSet = 0x1D, CmdID = 0x02
 | Frame Type    | Offset | Size | Name                  | Type     | Description                                                  |
 | ------------- | ------ | ---- | --------------------- | -------- | ------------------------------------------------------------ |
 | Command Frame | 0      | 1    | camera_mode           | uint8_t  | Camera current mode<br/>0x00: Slow Motion<br/>0x01: Video<br/>0x02: Still Time-lapse (selectable in time-lapse photography)<br/>0x05: Photo<br/>0x0A: Dynamic Time-lapse (selectable in time-lapse photography)<br/>0x1A: Live Mode<br/>0x23: UVC Live Mode<br/>0x28: Low-light Video (Ultra Night Scene in Action 5 Pro)<br/>0x34: Human Tracking |
-|               | 1      | 1    | camera_status         | uint8_t  | Camera status<br/>0x00: Screen off<br/>0x01: Live streaming<br/>0x02: Playback<br/>0x03: Recording or shooting<br/>0x05: Pre-recording |
+|               | 1      | 1    | camera_status         | uint8_t  | Camera status<br/>0x00: Screen off<br/>0x01: Live streaming (including screen-on without recording)<br/>0x02: Playback<br/>0x03: Recording or shooting<br/>0x05: Pre-recording |
 |               | 2      | 1    | video_resolution      | uint8_t  | Camera resolution<br/>10: 1080P<br/>16: 4K 16:9<br/>45: 2.7K 16:9<br/>66: 1080P 9:16<br/>67: 2.7K 9:16<br/>95: 2.7K 4:3<br/>103: 4K 4:3<br/>Photo format (Action 5 Pro)<br/>4: L<br/>3: M |
 |               | 3      | 1    | fps_idx               | uint8_t  | Camera frame rate<br/>1: 24fps<br/>2: 25fps<br/>3: 30fps<br/>4: 48fps<br/>5: 50fps<br/>6: 60fps<br/>10: 100fps<br/>7: 120fps<br/>19: 200fps<br/>8: 240fps<br/>In slow motion mode, this value indicates the slow motion multiplier, multiplier = frame rate / 30<br/>In photo mode, this value indicates burst count (1: normal photo, only one shot; >1: number of continuous shots) |
 |               | 4      | 1    | EIS_mode              | uint8_t  | Camera Stabilization Mode<br/>0: Off<br/>1: RS<br/>2: HS<br/>3: +RS<br/>4: HB |
-|               | 5      | 2    | record_time           | uint16_t | Current recording time, unit: seconds<br/>In burst mode, refers to burst time limit, unit: milliseconds |
+|               | 5      | 2    | record_time           | uint16_t | Current recording time (Including Pre-Recording Duration), unit: seconds<br/>In burst mode, refers to burst time limit, unit: milliseconds |
 |               | 7      | 1    | fov_type              | uint8_t  | FOV type, reserved                                           |
 |               | 8      | 1    | photo_ratio           | uint8_t  | Photo aspect ratio<br/>0: 4:3<br/>1: 16:9                    |
 |               | 9      | 2    | real_time_countdown   | uint16_t | Real-time countdown, unit: seconds                           |
@@ -229,7 +229,7 @@ CmdSet = 0x1D, CmdID = 0x02
 |               | 23     | 4    | remain_time           | uint32_t | Remaining recording time, unit: seconds                      |
 |               | 27     | 1    | user_mode             | uint8_t  | User mode, if it is an illegal value, treat it as 0<br/>0: General mode<br/>1: Custom mode 1<br/>2: Custom mode 2<br/>3: Custom mode 3<br/>4: Custom mode 4<br/>5: Custom mode 5 |
 |               | 28     | 1    | power_mode            | uint8_t  | Power mode<br/>0: Normal mode<br/>3: Sleep mode              |
-|               | 29     | 1    | camera_mode_next_flag | uint8_t  | Pre-switch flag                                              |
+|               | 29     | 1    | camera_mode_next_flag | uint8_t  | Pre-switch Flag<br/>In Pre-switch (QS) mode, only strings and icons are displayed without specific parameters.<br/>`camera_mode_next_flag` refers to the value of the next mode; if not in Pre-switch mode, `camera_mode_next_flag` represents the current mode and is identical to `camera_mode`. |
 |               | 30     | 1    | temp_over             | uint8_t  | Camera error<br/>0: Normal temperature<br/>1: Temperature warning, can record but the temperature is higher<br/>2: High temperature, cannot record<br/>3: Overheating, shutting down |
 |               | 31     | 4    | photo_countdown_ms    |          | Photo countdown parameter (unit: milliseconds), remote control converts to 0.5s, 1s, 2s, 3s, 5s, 10s for display |
 |               | 35     | 2    | loop_record_sends     | uint16_t | Loop recording duration (unit: seconds)<br>The remote control is switched to off, max, 5m, 20m, 1h, where off = 0<br>max = 65535 |

@@ -37,6 +37,7 @@ uint8_t current_camera_status = 0;
 uint8_t current_video_resolution = 0;
 uint8_t current_fps_idx = 0;
 uint8_t current_eis_mode = 0;
+uint8_t current_record_time = 0;
 bool camera_status_initialized = false;
 
 /**
@@ -74,6 +75,7 @@ void print_camera_status() {
     const char *resolution_str = video_resolution_to_string((video_resolution_t)current_video_resolution);
     const char *fps_str = fps_idx_to_string((fps_idx_t)current_fps_idx);
     const char *eis_str = eis_mode_to_string((eis_mode_t)current_eis_mode);
+    uint8_t record_time_seconds = current_record_time;
 
     ESP_LOGI(TAG, "Current camera status has changed:");
     ESP_LOGI(TAG, "  Mode: %s", mode_str);
@@ -81,6 +83,7 @@ void print_camera_status() {
     ESP_LOGI(TAG, "  Resolution: %s", resolution_str);
     ESP_LOGI(TAG, "  FPS: %s", fps_str);
     ESP_LOGI(TAG, "  EIS: %s", eis_str);
+    ESP_LOGI(TAG, "  Record time: %d seconds", record_time_seconds);
 }
 
 /**
@@ -172,6 +175,14 @@ void update_camera_state_handler(void *data) {
     if (current_eis_mode != parsed_data->eis_mode) {
         current_eis_mode = parsed_data->eis_mode;
         ESP_LOGI(TAG, "EIS mode updated to: %d", current_eis_mode);
+        state_changed = true;
+    }
+
+    // Check and update record time
+    // 检查并更新录制时间
+    if (current_record_time != parsed_data->record_time) {
+        current_record_time = parsed_data->record_time;
+        ESP_LOGI(TAG, "Record time updated to: %d", current_record_time);
         state_changed = true;
     }
 

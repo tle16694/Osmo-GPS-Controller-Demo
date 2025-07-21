@@ -219,12 +219,12 @@ CmdSet = 0x1D，CmdID = 0x02
 
 | 帧类型 | 偏移 | 大小 | 名字                  | 类型     | 描述                                                         |
 | ------ | ---- | ---- | --------------------- | -------- | ------------------------------------------------------------ |
-| 命令帧 | 0    | 1    | camera_mode           | uint8_t  | 相机当前模式<br>0x00：慢动作<br>0x01：视频<br>0x02：静止延时（延时摄影里选择）<br>0x05：拍照<br>0x0A：动态延时（延时摄影里选择）<br>0x1A：直播<br>0x23：UVC 直播<br>0x28：低光视频（Action 5 Pro 中为超极夜景）<br>0x34：人物跟随 |
-|        | 1    | 1    | camera_status         | uint8_t  | 相机状态<br>0x00：屏幕关闭<br>0x01：直播<br>0x02：回放<br>0x03：拍照或录像中<br>0x05：预录制中 |
+| 命令帧 | 0    | 1    | camera_mode           | uint8_t  | 相机当前模式<br>0x00：慢动作<br>0x01：视频<br>0x02：静止延时（延时摄影里选择）<br>0x05：拍照<br>0x0A：动态延时（延时摄影里选择）<br>0x1A：直播<br>0x23：UVC 直播<br>0x28：低光视频（Action 5 Pro 中为超级夜景）<br>0x34：人物跟随 |
+|        | 1    | 1    | camera_status         | uint8_t  | 相机状态<br>0x00：屏幕关闭<br>0x01：直播（包括亮屏未录制）<br>0x02：回放<br>0x03：拍照或录像中<br>0x05：预录制中 |
 |        | 2    | 1    | video_resolution      | uint8_t  | 相机分辨率<br>10：1080P<br>16：4K 16:9<br>45：2.7K 16:9<br>66：1080P 9:16<br>67：2.7K 9:16<br>95：2.7K 4:3<br>103：4K 4:3<br>拍照画幅（Action 5 Pro）<br>4：L<br>3：M |
 |        | 3    | 1    | fps_idx               | uint8_t  | 相机帧率<br>1：24fps<br>2：25fps<br>3：30fps<br>4：48fps<br>5：50fps<br>6：60fps<br>10：100fps<br>7：120fps<br>19：200fps<br>8：240fps<br>慢动作模式时，该值指慢动作倍率，倍率 = 帧率 / 30<br>拍照模式时，该值指连拍数（1：普通拍照 ，只拍一张；\>1：连拍张数） |
 |        | 4    | 1    | EIS_mode              | uint8_t  | 相机增稳模式<br>0：关闭<br>1：RS<br>2：HS<br>3：+RS<br>4：HB |
-|        | 5    | 2    | record_time           | uint16_t | 当前录像时间，单位：秒<br>连拍状态下，指连拍时限，单位：毫秒 |
+|        | 5    | 2    | record_time           | uint16_t | 当前录像时间（包括预录制时长），单位：秒<br>连拍状态下，指连拍时限，单位：毫秒 |
 |        | 7    | 1    | fov_type              | uint8_t  | FOV 类型，保留                                               |
 |        | 8    | 1    | photo_ratio           | uint8_t  | 图片比例<br>0：4:3<br>1：16:9                                |
 |        | 9    | 2    | real_time_countdown   | uint16_t | 实时倒计时，单位：秒                                         |
@@ -235,7 +235,7 @@ CmdSet = 0x1D，CmdID = 0x02
 |        | 23   | 4    | remain_time           | uint32_t | 剩余录像时间，单位：秒                                       |
 |        | 27   | 1    | user_mode             | uint8_t  | 用户模式，非法值按 0 处理<br>0：通用模式<br>1：自定义模式1<br>2：自定义模式2<br>3：自定义模式3<br>4：自定义模式4<br>5：自定义模式5 |
 |        | 28   | 1    | power_mode            | uint8_t  | 电源模式<br>0：正常工作模式<br>3：休眠模式                   |
-|        | 29   | 1    | camera_mode_next_flag | uint8_t  | 预切换标志<br>用于遥控器切换模式时，指示正在选择需要只显示模式图标，隐藏参数，具体已选中的模式由 camera_mode 标明 |
+|        | 29   | 1    | camera_mode_next_flag | uint8_t  | 预切换标志<br/>在预切换（例如 QS）模式下，仅显示模式名称和图标，不展示具体参数。<br/> `camera_mode_next_flag` 表示即将切换的目标模式；若当前不处于预切换模式，则该字段表示当前模式，与 `camera_mode` 保持一致。 |
 |        | 30   | 1    | temp_over             | uint8_t  | 相机发生了错误<br>0：温度正常<br>1：温度警告，可以录制但温度比较高了<br>2：温度高，不可以录制<br>3：温度过高，要关机了 |
 |        | 31   | 4    | photo_countdown_ms    | uint32_t | 拍照倒计时参数（单位：毫秒）遥控器转换为 0.5s，1s，2s，3s，5s，10s 几个档显示 |
 |        | 35   | 2    | loop_record_sends     | uint16_t | 循环录像时长（单位：秒）<br>遥控器转为 off，max，5m，20m，1h 几档显示，其中 off = 0<br>max = 65535 |
