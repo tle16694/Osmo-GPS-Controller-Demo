@@ -228,7 +228,7 @@ CmdSet = 0x1D，CmdID = 0x02
 |        | 7    | 1    | fov_type              | uint8_t  | FOV 类型，保留                                               |
 |        | 8    | 1    | photo_ratio           | uint8_t  | 图片比例<br>0：4:3<br>1：16:9                                |
 |        | 9    | 2    | real_time_countdown   | uint16_t | 实时倒计时，单位：秒                                         |
-|        | 11   | 2    | timelapse_interval    | uint16_t | 延时摄影录像时间间隔，单位：10秒<br>在延时摄影运动模式下，指运动模式倍率 |
+|        | 11   | 2    | timelapse_interval    | uint16_t | 延时摄影录像时间间隔，单位：0.1 秒（例如当间隔为 0.5 秒，这个值为 5）<br>在延时摄影运动模式下，指运动模式倍率（Auto 选项下值为 0） |
 |        | 13   | 2    | timelapse_duration    | uint16_t | 延时录像时长，单位：秒                                       |
 |        | 15   | 4    | remain_capacity       | uint32_t | SD 卡剩余容量，单位：MB                                      |
 |        | 19   | 4    | remain_photo_num      | uint32_t | 剩余拍照张数                                                 |

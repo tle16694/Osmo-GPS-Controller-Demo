@@ -37,7 +37,8 @@ uint8_t current_camera_status = 0;
 uint8_t current_video_resolution = 0;
 uint8_t current_fps_idx = 0;
 uint8_t current_eis_mode = 0;
-uint8_t current_record_time = 0;
+uint16_t current_record_time = 0;
+uint16_t current_timelapse_interval = 0;
 bool camera_status_initialized = false;
 
 /**
@@ -75,7 +76,8 @@ void print_camera_status() {
     const char *resolution_str = video_resolution_to_string((video_resolution_t)current_video_resolution);
     const char *fps_str = fps_idx_to_string((fps_idx_t)current_fps_idx);
     const char *eis_str = eis_mode_to_string((eis_mode_t)current_eis_mode);
-    uint8_t record_time_seconds = current_record_time;
+    uint8_t record_time = current_record_time;
+    uint16_t timelapse_interval = current_timelapse_interval;
 
     ESP_LOGI(TAG, "Current camera status has changed:");
     ESP_LOGI(TAG, "  Mode: %s", mode_str);
@@ -83,7 +85,8 @@ void print_camera_status() {
     ESP_LOGI(TAG, "  Resolution: %s", resolution_str);
     ESP_LOGI(TAG, "  FPS: %s", fps_str);
     ESP_LOGI(TAG, "  EIS: %s", eis_str);
-    ESP_LOGI(TAG, "  Record time: %d seconds", record_time_seconds);
+    ESP_LOGI(TAG, "  Record time: %d", record_time);
+    ESP_LOGI(TAG, "  Timelapse interval: %d", timelapse_interval);
 }
 
 /**
@@ -186,6 +189,14 @@ void update_camera_state_handler(void *data) {
         state_changed = true;
     }
 
+    // Check and update timelapse interval
+    // 检查并更新延时摄影间隔
+    if (current_timelapse_interval != parsed_data->timelapse_interval) {
+        current_timelapse_interval = parsed_data->timelapse_interval;
+        ESP_LOGI(TAG, "Timelapse interval updated to: %d", current_timelapse_interval);
+        state_changed = true;
+    }
+
     // If status not initialized, mark as initialized
     // 如果状态尚未初始化，标记为已初始化
     if (!camera_status_initialized) {
@@ -197,6 +208,7 @@ void update_camera_state_handler(void *data) {
 
     // If state changed or first initialization, print current camera status
     // 如果状态变更或第一次初始化，打印当前相机状态
+    print_camera_status();
     if (state_changed) {
         print_camera_status();
     }
