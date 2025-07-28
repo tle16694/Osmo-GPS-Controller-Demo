@@ -87,3 +87,20 @@ For detailed implementation, refer to the **Key Reporting (0011)** feature in th
 ## 8. UI Design Corresponding to Camera Modes
 
 Reference: Please refer to the **Camera Status Push (1D02)** function in the [DATA Segment Detailed Documentation](protocol_data_segment.md), which provides detailed explanations on how parameters are displayed and mapped to frame fields under different camera modes.
+
+## 9. When Should GPS Data Be Transmitted?
+
+The remote controller should begin transmitting GPS data at a frequency of 10 Hz immediately after a successful connection with the camera, rather than waiting until video recording starts.
+ Additionally, it is recommended to include an indicator light to show whether a GPS signal has been acquired.
+
+## 10. What Is the Difference Between Reporting the QS Button and Using the Unified Mode Switching Command?
+
+**Reporting the QS button** is equivalent to a short press of the camera’s QS button (typically the power button). The target shooting mode is determined by the camera’s internal configuration, and the remote controller does not need to specify the mode—it simply sends a key report command. A single press will switch to the first mode in the quick switch list; repeated short presses will cycle through the remaining modes.
+
+**The unified mode switching command**, on the other hand, allows direct switching to a specific shooting mode. This approach is more explicit and efficient, ideal for scenarios such as “one-click switch to XX mode.”
+
+## 11. How to Implement Shoot/Record Control?
+
+There are two approaches to implementing shoot/record control:
+
+One approach is to use the **Recording Control command (1D03)**. However, we recommend using the shoot/record button in the **Key Reporting command (0011)**, which is equivalent to a short press of the camera’s shutter button. This method simplifies the logic by eliminating the need to determine the current recording state.

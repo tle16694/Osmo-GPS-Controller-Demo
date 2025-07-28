@@ -37,6 +37,8 @@ uint8_t current_camera_status = 0;
 uint8_t current_video_resolution = 0;
 uint8_t current_fps_idx = 0;
 uint8_t current_eis_mode = 0;
+uint8_t current_user_mode = 0;
+uint8_t current_camera_mode_next_flag = 0;
 uint16_t current_record_time = 0;
 uint16_t current_timelapse_interval = 0;
 bool camera_status_initialized = false;
@@ -76,7 +78,9 @@ void print_camera_status() {
     const char *resolution_str = video_resolution_to_string((video_resolution_t)current_video_resolution);
     const char *fps_str = fps_idx_to_string((fps_idx_t)current_fps_idx);
     const char *eis_str = eis_mode_to_string((eis_mode_t)current_eis_mode);
-    uint8_t record_time = current_record_time;
+    uint8_t user_mode = current_user_mode;
+    uint8_t camera_mode_next_flag = current_camera_mode_next_flag;
+    uint16_t record_time = current_record_time;
     uint16_t timelapse_interval = current_timelapse_interval;
 
     ESP_LOGI(TAG, "Current camera status has changed:");
@@ -85,6 +89,8 @@ void print_camera_status() {
     ESP_LOGI(TAG, "  Resolution: %s", resolution_str);
     ESP_LOGI(TAG, "  FPS: %s", fps_str);
     ESP_LOGI(TAG, "  EIS: %s", eis_str);
+    ESP_LOGI(TAG, "  User mode: %d", current_user_mode);
+    ESP_LOGI(TAG, "  Camera mode next flag: %d", current_camera_mode_next_flag);
     ESP_LOGI(TAG, "  Record time: %d", record_time);
     ESP_LOGI(TAG, "  Timelapse interval: %d", timelapse_interval);
 }
@@ -178,6 +184,22 @@ void update_camera_state_handler(void *data) {
     if (current_eis_mode != parsed_data->eis_mode) {
         current_eis_mode = parsed_data->eis_mode;
         ESP_LOGI(TAG, "EIS mode updated to: %d", current_eis_mode);
+        state_changed = true;
+    }
+
+    // Check and update user mode
+    // 检查并更新用户模式
+    if (current_user_mode != parsed_data->user_mode) {
+        current_user_mode = parsed_data->user_mode;
+        ESP_LOGI(TAG, "User mode updated to: %d", current_user_mode);
+        state_changed = true;
+    }
+
+    // Check and update camera mode next flag
+    // 检查并更新相机模式下一个标志
+    if (current_camera_mode_next_flag != parsed_data->camera_mode_next_flag) {
+        current_camera_mode_next_flag = parsed_data->camera_mode_next_flag;
+        ESP_LOGI(TAG, "Camera mode next flag updated to: %d", current_camera_mode_next_flag);
         state_changed = true;
     }
 

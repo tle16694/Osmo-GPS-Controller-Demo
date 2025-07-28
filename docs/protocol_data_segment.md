@@ -148,7 +148,7 @@ CmdSet = 0x1D, CmdID = 0x04
 | Frame Type    | Offset | Size | Name      | Type       | Description                                                  |
 | ------------- | ------ | ---- | --------- | ---------- | ------------------------------------------------------------ |
 | Command Frame | 0      | 4    | device_id | uint32_t   | Device ID                                                    |
-|               | 4      | 1    | mode      | uint8_t    | Mode: send invalid mode when querying the mode<br/>Refer to the camera status in camera status push |
+|               | 4      | 1    | mode      | uint8_t    | Refer to the `camera_mode` field in the camera status push function |
 |               | 5      | 4    | reserved  | uint8_t[4] | Reserved                                                     |
 
 | Frame Type     | Offset | Size | Name     | Type       | Description                                   |
