@@ -22,52 +22,58 @@
 const char* camera_mode_to_string(camera_mode_t mode) {
     switch (mode) {
         case CAMERA_MODE_SLOW_MOTION:
-            return "慢动作模式";
+            return "慢动作 / Slow Motion";
         case CAMERA_MODE_NORMAL:
-            return "普通模式";
+            return "视频 / Video";
         case CAMERA_MODE_TIMELAPSE_STATIC:
-            return "延时摄影模式 1 静止延时";
+            return "静止延时 / Still Time-lapse";
         case CAMERA_MODE_PHOTO:
-            return "普通拍照模式";
+            return "拍照 / Photo";
         case CAMERA_MODE_TIMELAPSE_MOTION:
-            return "延时摄影模式 2 运动延时";
+            return "运动延时 / Dynamic Time-lapse";
         case CAMERA_MODE_LIVE_STREAMING:
-            return "直播模式";
+            return "直播 / Live Streaming";
         case CAMERA_MODE_UVC_STREAMING:
-            return "UVC 直播模式";
+            return "UVC 直播 / UVC Live Streaming";
         case CAMERA_MODE_LOW_LIGHT_VIDEO:
-            return "低光视频（超级夜景）";
+            return "低光视频（超级夜景）/ Ultra Night Scene";
         case CAMERA_MODE_SMART_TRACKING:
-            return "智能跟随";
+            return "人物跟随 / Human Tracking";
         default:
-            return "未知模式";
+            return "其它模式，详见 1D06 命令 / Other Mode, see 1D06 Cmd";
     }
 }
 
 const char* camera_status_to_string(camera_status_t status) {
     switch (status) {
         case CAMERA_STATUS_SCREEN_OFF:
-            return "屏幕关闭";
+            return "屏幕关闭 / Screen off";
         case CAMERA_STATUS_LIVE_STREAMING:
-            return "直播";
+            return "直播 / Live streaming (including screen-on without recording)";
         case CAMERA_STATUS_PLAYBACK:
-            return "回放";
+            return "回放 / Playback";
         case CAMERA_STATUS_PHOTO_OR_RECORDING:
-            return "拍照或录像中";
+            return "拍照或录像中 / Photo or recording";
         case CAMERA_STATUS_PRE_RECORDING:
-            return "预录制中";
+            return "预录制中 / Pre-recording";
         default:
-            return "未知状态";
+            return "未知状态 / Unknown status";
     }
 }
 
 const char* video_resolution_to_string(video_resolution_t res) {
     switch (res) {
         case VIDEO_RESOLUTION_1080P: return "1920x1080P";
-        case VIDEO_RESOLUTION_2K_16_9: return "2720x1530P 2.7K 16:9";
-        case VIDEO_RESOLUTION_2K_4_3: return "2720x2040P 2.7K 4:3";
         case VIDEO_RESOLUTION_4K_16_9: return "4096x2160P 4K 16:9";
+        case VIDEO_RESOLUTION_2K_16_9: return "2720x1530P 2.7K 16:9";
+        case VIDEO_RESOLUTION_1080P_9_16: return "1920x1080P 9:16";
+        case VIDEO_RESOLUTION_2K_9_16: return "2720x1530P 9:16";
+        case VIDEO_RESOLUTION_2K_4_3: return "2720x2040P 2.7K 4:3";
         case VIDEO_RESOLUTION_4K_4_3: return "4096x3072P 4K 4:3";
+        case VIDEO_RESOLUTION_4K_9_16: return "4096x2160P 4K 9:16";
+        case VIDEO_RESOLUTION_L: return "拍照画幅 L / Ultra Wide 30MP (Osmo360)";
+        case VIDEO_RESOLUTION_M: return "拍照画幅 M / Wide 20MP (Osmo360)";
+        case VIDEO_RESOLUTION_S: return "Standard 12MP (Osmo360)";
         default: return "未知分辨率";
     }
 }
@@ -84,17 +90,17 @@ const char* fps_idx_to_string(fps_idx_t fps) {
         case FPS_120: return "120fps";
         case FPS_200: return "200fps";
         case FPS_240: return "240fps";
-        default: return "未知帧率";
+        default: return "未知帧率 / Unknown FPS";
     }
 }
 
 const char* eis_mode_to_string(eis_mode_t mode) {
     switch (mode) {
-        case EIS_MODE_OFF: return "关闭";
+        case EIS_MODE_OFF: return "关闭 / Off";
         case EIS_MODE_RS: return "RS";
         case EIS_MODE_RS_PLUS: return "RS+";
-        case EIS_MODE_HB: return "-HB";
-        case EIS_MODE_HS: return "-HS";
-        default: return "未知防抖模式";
+        case EIS_MODE_HB: return "HB";
+        case EIS_MODE_HS: return "HS";
+        default: return "未知防抖模式 / Unknown EIS mode";
     }
 }

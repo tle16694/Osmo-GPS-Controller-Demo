@@ -61,8 +61,8 @@ const data_descriptor_t *find_data_descriptor(uint8_t cmd_set, uint8_t cmd_id) {
  *                    数据长度
  * @param structure_out Output structure pointer
  *                      输出结构体指针
- * @return Return 0 on success, -1 on failure
- *         成功返回0，失败返回-1
+ * @return Return 0 on success, -1 or -2 on failure
+ *         成功返回0，失败返回-1或-2
  */
 int data_parser_by_structure(uint8_t cmd_set, uint8_t cmd_id, uint8_t cmd_type, const uint8_t *data, size_t data_length, void *structure_out) {
     ESP_LOGI(TAG, "Parsing CmdSet: 0x%02X, CmdID: 0x%02X, CmdType: 0x%02X", cmd_set, cmd_id, cmd_type);
@@ -70,16 +70,12 @@ int data_parser_by_structure(uint8_t cmd_set, uint8_t cmd_id, uint8_t cmd_type, 
     // Find corresponding descriptor
     // 查找对应的命令描述符
     const data_descriptor_t *descriptor = find_data_descriptor(cmd_set, cmd_id);
-    if (descriptor == NULL) {
-        fprintf(stderr, "Descriptor not found for CmdSet: 0x%02X, CmdID: 0x%02X\n", cmd_set, cmd_id);
-        return -1;
-    }
 
     // Check if parser function exists
     // 检查解析函数是否存在
     if (descriptor->parser == NULL) {
-        fprintf(stderr, "Parser function is NULL for CmdSet: 0x%02X, CmdID: 0x%02X\n", cmd_set, cmd_id);
-        return -1;
+        ESP_LOGW(TAG, "Parser function is NULL for CmdSet: 0x%02X, CmdID: 0x%02X", cmd_set, cmd_id);
+        return -2;
     }
 
     return descriptor->parser(data, data_length, structure_out, cmd_type);
@@ -107,14 +103,14 @@ uint8_t* data_creator_by_structure(uint8_t cmd_set, uint8_t cmd_id, uint8_t cmd_
     // 查找对应的命令描述符
     const data_descriptor_t *descriptor = find_data_descriptor(cmd_set, cmd_id);
     if (descriptor == NULL) {
-        fprintf(stderr, "Descriptor not found for CmdSet: 0x%02X, CmdID: 0x%02X\n", cmd_set, cmd_id);
+        ESP_LOGW(TAG, "Descriptor not found for CmdSet: 0x%02X, CmdID: 0x%02X", cmd_set, cmd_id);
         return NULL;
     }
 
     // Check if creator function exists
     // 检查创建函数是否存在
     if (descriptor->creator == NULL) {
-        fprintf(stderr, "Creator function is NULL for CmdSet: 0x%02X, CmdID: 0x%02X\n", cmd_set, cmd_id);
+        ESP_LOGW(TAG, "Creator function is NULL for CmdSet: 0x%02X, CmdID: 0x%02X", cmd_set, cmd_id);
         return NULL;
     }
 

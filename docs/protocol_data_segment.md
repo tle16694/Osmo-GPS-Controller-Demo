@@ -64,6 +64,7 @@ CmdSet = 0x00, CmdID = 0x19
 
 1. When the version number is `0`, the camera will not push firmware updates to the remote control.
 2. Different camera models can be distinguished by `device_id`.
+3. The first-step connection request command frame can be constructed and tested using `connect_cmd_frame_builder.c`, or you can directly use the pre-generated partial test frames stored in the `connect_cmd_frame.txt` file.
 
 ## Version Query (0000)
 
@@ -97,9 +98,9 @@ CmdSet = 0x00, CmdID = 0x11
 
 | Key Name        | Key_code | Description                                                  |
 | --------------- | -------- | ------------------------------------------------------------ |
-| Record Button   | 0x01     | Single press event: record                                   |
-| QS Button       | 0x02     | Single press event: quick mode switch                        |
-| SNAPSHOT Button | 0x03     | Single press event: quick record, the camera will automatically sleep after recording |
+| Record Button   | 0x01     | Single press event: Capture/record in wake state.            |
+| QS Button       | 0x02     | Single press event: In wake state, quickly switch modes — each press changes to the next mode. |
+| SNAPSHOT Button | 0x03     | Single press event: In sleep state, quickly capture/record; after recording is completed, the camera will automatically return to sleep. The wake-up broadcast process must be sent before sending this key value. For details on the broadcast wake-up camera, see: Camera Power Mode Settings (001A) |
 
 ## Device Restart (0016)
 
@@ -112,7 +113,7 @@ CmdSet = 0x00, CmdID = 0x16
 
 | Frame Type     | Offset | Size | Name      | Type       | Description                  |
 | -------------- | ------ | ---- | --------- | ---------- | ---------------------------- |
-| Response Frame | 0      | 4    | device_id | uint32_t   |                              |
+| Response Frame | 0      | 4    | device_id | uint32_t   | Device ID                    |
 |                | 4      | 1    | ret_code  | uint8_t    | Refer to common return codes |
 |                | 5      | 4    | reserved  | uint8_t[4] | Reserved                     |
 
@@ -135,9 +136,9 @@ CmdSet = 0x00, CmdID = 0x17
 |               | 40     | 4    | speed_accuracy_estimate      | uint32_t | Speed accuracy estimate in cm/s           |
 |               | 44     | 4    | satellite_number             | uint32_t | Number of satellites                      |
 
-| Frame Type     | Offset | Size | Name     | Type    | Description                  |
-| -------------- | ------ | ---- | -------- | ------- | ---------------------------- |
-| Response Frame | 0      | 1    | ret_code | uint8_t | Refer to common return codes |
+| Frame Type     | Offset | Size | Name     | Type    | Description                                                  |
+| -------------- | ------ | ---- | -------- | ------- | ------------------------------------------------------------ |
+| Response Frame | 0      | 1    | ret_code | uint8_t | Refer to common return codes.<br>This acknowledgment is not required. |
 
 The GPS command frame test data can be found in the `test_gps.c` file.
 
@@ -199,13 +200,13 @@ CmdSet = 0x1D, CmdID = 0x05
 
 | Frame Type    | Offset | Size | Name      | Type       | Description                                                  |
 | ------------- | ------ | ---- | --------- | ---------- | ------------------------------------------------------------ |
-| Command Frame | 0      | 1    | push_mode | uint8_t    | Push mode<br>0: Off<br>1: Single<br>2: Periodic<br>3: Periodic + status change push |
-|               | 1      | 1    | push_freq | uint8_t    | Push frequency, unit: 0.1 Hz                                 |
+| Command Frame | 0      | 1    | push_mode | uint8_t    | Push mode<br>0: Off<br>1: Single<br>2: Periodic<br>3: Periodic + Push once after the status changes |
+|               | 1      | 1    | push_freq | uint8_t    | Push frequency, unit: 0.1 Hz; ; only 20 can be entered here, fixed at 2 Hz and not adjustable |
 |               | 2      | 4    | reserved  | uint8_t[4] | Reserved                                                     |
 
-| Frame Type     | Offset | Size | Name | Type | Description                                      |
-| -------------- | ------ | ---- | ---- | ---- | ------------------------------------------------ |
-| Response Frame |        |      |      |      | Response is the camera status push command frame |
+| Frame Type     | Offset | Size | Name | Type | Description                                             |
+| -------------- | ------ | ---- | ---- | ---- | ------------------------------------------------------- |
+| Response Frame |        |      |      |      | Response is the Camera Status Push (1D02) command frame |
 
 ## Camera Status Push (1D02)
 
@@ -213,11 +214,11 @@ CmdSet = 0x1D, CmdID = 0x02
 
 | Frame Type    | Offset | Size | Name                  | Type     | Description                                                  |
 | ------------- | ------ | ---- | --------------------- | -------- | ------------------------------------------------------------ |
-| Command Frame | 0      | 1    | camera_mode           | uint8_t  | Camera current mode<br/>0x00: Slow Motion<br/>0x01: Video<br/>0x02: Still Time-lapse (selectable in time-lapse photography)<br/>0x05: Photo<br/>0x0A: Dynamic Time-lapse (selectable in time-lapse photography)<br/>0x1A: Live Mode<br/>0x23: UVC Live Mode<br/>0x28: Low-light Video (Ultra Night Scene in Action 5 Pro)<br/>0x34: Human Tracking |
-|               | 1      | 1    | camera_status         | uint8_t  | Camera status<br/>0x00: Screen off<br/>0x01: Live streaming (including screen-on without recording)<br/>0x02: Playback<br/>0x03: Recording or shooting<br/>0x05: Pre-recording |
-|               | 2      | 1    | video_resolution      | uint8_t  | Camera resolution<br/>10: 1080P<br/>16: 4K 16:9<br/>45: 2.7K 16:9<br/>66: 1080P 9:16<br/>67: 2.7K 9:16<br/>95: 2.7K 4:3<br/>103: 4K 4:3<br/>Photo format (Action 5 Pro)<br/>4: L<br/>3: M |
+| Command Frame | 0      | 1    | camera_mode           | uint8_t  | Camera current mode<br/>0x00: Slow Motion<br/>0x01: Video<br/>0x02: Still Time-lapse (selectable in time-lapse photography)<br/>0x05: Photo<br/>0x0A: Dynamic Time-lapse (selectable in time-lapse photography)<br/>0x1A: Live Streaming<br/>0x23: UVC Live Streaming<br/>0x28: Low-light Video (Ultra Night Scene in Action 5 Pro)<br/>0x34: Human Tracking<br/>Others: Use the new protocol, referring to the **New Camera Status Push (1D06)**. When the camera status changes, a **1D02** command will be followed by a **1D06** command. |
+|               | 1      | 1    | camera_status         | uint8_t  | Camera status<br/>0x00: Screen off<br/>0x01: Live streaming (including screen-on without recording)<br/>0x02: Playback<br/>0x03: Photo or recording<br/>0x05: Pre-recording |
+|               | 2      | 1    | video_resolution      | uint8_t  | Camera resolution<br/>10: 1080P<br/>16: 4K 16:9<br/>45: 2.7K 16:9<br/>66: 1080P 9:16<br/>67: 2.7K 9:16<br/>95: 2.7K 4:3<br/>103: 4K 4:3<br/>109：4K 9:16<br/>Photo format (Osmo Action)<br/>4: L<br/>3: M<br>Photo format (Osmo 360)<br/>4：Ultra Wide 30MP<br/>3：Wide 20MP<br/>2：Standard 12MP |
 |               | 3      | 1    | fps_idx               | uint8_t  | Camera frame rate<br/>1: 24fps<br/>2: 25fps<br/>3: 30fps<br/>4: 48fps<br/>5: 50fps<br/>6: 60fps<br/>10: 100fps<br/>7: 120fps<br/>19: 200fps<br/>8: 240fps<br/>In slow motion mode, this value indicates the slow motion multiplier, multiplier = frame rate / 30<br/>In photo mode, this value indicates burst count (1: normal photo, only one shot; >1: number of continuous shots) |
-|               | 4      | 1    | EIS_mode              | uint8_t  | Camera Stabilization Mode<br/>0: Off<br/>1: RS<br/>2: HS<br/>3: +RS<br/>4: HB |
+|               | 4      | 1    | EIS_mode              | uint8_t  | Camera Stabilization Mode<br/>0: Off<br/>1: RS<br/>2: HS<br/>3: RS+<br/>4: HB |
 |               | 5      | 2    | record_time           | uint16_t | Current recording time (Including Pre-Recording Duration), unit: seconds<br/>In burst mode, refers to burst time limit, unit: milliseconds |
 |               | 7      | 1    | fov_type              | uint8_t  | FOV type, reserved                                           |
 |               | 8      | 1    | photo_ratio           | uint8_t  | Photo aspect ratio<br/>0: 4:3<br/>1: 16:9                    |
@@ -245,35 +246,35 @@ CmdSet = 0x1D, CmdID = 0x02
 
 * `camera_mode` = 0x00（Slow Motion）
 
-  <img title="Slow Motion UI Design" src="/Users/zachy.zhang/Documents/projects/Osmo-GPS-Controller-Demo/docs/images/camera_mode_ui_design/slow_motion.png" alt="Slow Motion UI Design" data-align="center" width="300">
+  <img title="Slow Motion UI Design" src="images/camera_mode_ui_design/slow_motion.png" alt="Slow Motion UI Design" data-align="center" width="300">
 
 * `camera_mode` = 0x01（Video）
 
   Video, loop recording (if the `loop_record_sends` field is not 0, loop recording is active):
 
-  <img title="Video Mode 1" src="/Users/zachy.zhang/Documents/projects/Osmo-GPS-Controller-Demo/docs/images/camera_mode_ui_design/video_1.png" alt="Video Mode 1" data-align="center" width="400">
+  <img title="Video Mode 1" src="images/camera_mode_ui_design/video_1.png" alt="Video Mode 1" data-align="center" width="400">
 
   Pre-recording：
 
-  <img title="Video Mode 2" src="/Users/zachy.zhang/Documents/projects/Osmo-GPS-Controller-Demo/docs/images/camera_mode_ui_design/video_2.png" alt="Video Mode 2" data-align="center" width="400">
+  <img title="Video Mode 2" src="images/camera_mode_ui_design/video_2.png" alt="Video Mode 2" data-align="center" width="400">
 
 * `camera_mode` = 0x02（Still Time-lapse）
 
-  <img title="Still Time-lapse" src="/Users/zachy.zhang/Documents/projects/Osmo-GPS-Controller-Demo/docs/images/camera_mode_ui_design/still_time_lapse.png" alt="Still Time-lapse" data-align="center" width="400">
+  <img title="Still Time-lapse" src="images/camera_mode_ui_design/still_time_lapse.png" alt="Still Time-lapse" data-align="center" width="400">
 
 * `camera_mode` = 0x05（Photo）
 
-  <img title="Photo" src="/Users/zachy.zhang/Documents/projects/Osmo-GPS-Controller-Demo/docs/images/camera_mode_ui_design/photo.png" alt="Photo" data-align="center" width="650">
+  <img title="Photo" src="images/camera_mode_ui_design/photo.png" alt="Photo" data-align="center" width="650">
 
   If the number of continuous shots `fps_idx` is greater than 1, it indicates burst mode is active, and the display is as follows:
 
-  <img title="Photo Continuous Shots" src="/Users/zachy.zhang/Documents/projects/Osmo-GPS-Controller-Demo/docs/images/camera_mode_ui_design/photo_cs.png" alt="Photo Continuous Shots" data-align="center" width="400">
+  <img title="Photo Continuous Shots" src="images/camera_mode_ui_design/photo_cs.png" alt="Photo Continuous Shots" data-align="center" width="400">
 
   The L / M photo sizes are detailed in the `video_resolution` field.
 
 * `camera_mode` = 0x0A（Dynamic Time-lapse）
 
-  <img title="Dynamic Time-lapse" src="/Users/zachy.zhang/Documents/projects/Osmo-GPS-Controller-Demo/docs/images/camera_mode_ui_design/dynamic_time_lapse.png" alt="Dynamic Time-lapse" data-align="center" width="260">
+  <img title="Dynamic Time-lapse" src="images/camera_mode_ui_design/dynamic_time_lapse.png" alt="Dynamic Time-lapse" data-align="center" width="260">
 
 * `camera_mode` = 0x28（Low-light Video）
 
@@ -289,7 +290,24 @@ CmdSet = 0x1D, CmdID = 0x02
 
 * When `user_mode` is not equal to 0, it indicates a custom mode.
 
-  <img title="Custom Mode" src="/Users/zachy.zhang/Documents/projects/Osmo-GPS-Controller-Demo/docs/images/camera_mode_ui_design/custom_mode.png" alt="Custom Mode" data-align="center" width="260">
+  <img title="Custom Mode" src="images/camera_mode_ui_design/custom_mode.png" alt="Custom Mode" data-align="center" width="260">
+
+## New Camera Status Push (1D06)
+
+CmdSet = 0x1D, CmdID = 0x06
+
+| Frame Type    | Offset | Size | Name              | Type        | Description                                                  |
+| ------------- | ------ | ---- | ----------------- | ----------- | ------------------------------------------------------------ |
+| Command Frame | 0      | 1    | type_mode_name    | uint8_t     | Fixed to 0x01                                                |
+|               | 1      | 1    | mode_name_length  | uint8_t     | Mode name length                                             |
+|               | 2      | 20   | mode_name         | uint8_t[20] | Mode name, in ASCII code, up to 20 bytes, string, displayed directly |
+|               | 22     | 1    | type_mode_param   | uint8_t     | Fixed to 0x02                                                |
+|               | 23     | 1    | mode_param_length | uint8_t     | Mode parameter length                                        |
+|               | 24     | 20   | mode_param        | uint8_t[20] | Mode parameter, in ASCII code, up to 20 bytes                |
+
+UI design reference:
+
+<img title="New Camera Status Push" src="images/camera_mode_ui_design/new_camera_status_push.png" alt="New Camera Status Push" data-align="center" width="660">
 
 ## Camera Power Mode Settings (001A)
 
@@ -321,13 +339,13 @@ Once the camera enters sleep mode, it can no longer send any data, which may cau
 
 To use broadcast to wake up the camera, the prerequisite is that the remote controller has successfully connected to the camera within a recent period.
 
-Broadcast Packet Reference for Osmo Action 5 Pro:
+Broadcast Packet Reference for Osmo Action 5 Pro (The above image shows the broadcast from the OA5Pro, and the below image shows the broadcast of the Bluetooth remote waking up the OA5Pro) :
 
 <img title="OA5Pro Bluetooth Scan Example" src="images/oa5pro_bluetooth_scan_example.png" alt="OA5Pro Bluetooth Scan Example" data-align="center" width="300">
 
 <img title="OA5Pro Wakeup Adv" src="images/oa5pro_wakeup_adv.png" alt="OA5Pro Wakeup Adv" data-align="center" width="280">
 
-Broadcast Packet Reference for Osmo Action 4:
+Broadcast Packet Reference for Osmo Action 4 (The above image shows the broadcast from the OA4, and the below image shows the broadcast of the Bluetooth remote waking up the OA4) :
 
 <img title="OA4 Bluetooth Scan Example" src="images/oa4_bluetooth_scan_example.png" alt="OA4 Bluetooth Scan Example" data-align="center" width="300">
 

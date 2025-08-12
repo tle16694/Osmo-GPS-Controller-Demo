@@ -50,6 +50,9 @@ const data_descriptor_t data_descriptors[] = {
     // Camera status push
     // 相机状态推送
     {0x1D, 0x02, NULL, (data_parser_func_t)camera_status_push_data_parser},
+    // New Camera status push
+    // 新相机状态推送
+    {0x1D, 0x06, NULL, (data_parser_func_t)new_camera_status_push_data_parser},
     // Key report
     // 按键上报
     {0x00, 0x11, (data_creator_func_t)key_report_creator, (data_parser_func_t)key_report_parser},
@@ -470,6 +473,47 @@ int camera_status_push_data_parser(const uint8_t *data, size_t data_length, void
         return 0;
     } else {
         ESP_LOGE(TAG, "camera_status_push_data_parser: Response frames are not supported");
+        return -1;
+    }
+}
+
+int new_camera_status_push_data_parser(const uint8_t *data, size_t data_length, void *structure_out, uint8_t cmd_type) {
+    if (data == NULL || structure_out == NULL) {
+        ESP_LOGE(TAG, "new_camera_status_push_data_parser: NULL input detected");
+        return -1;
+    }
+
+    ESP_LOGI(TAG, "Parsing New Camera Status Push data, received data length: %zu", data_length);
+
+    if ((cmd_type & 0x20) == 0) {
+        if (data_length < sizeof(new_camera_status_push_command_frame)) {
+            ESP_LOGE(TAG, "new_camera_status_push_data_parser: Data length too short for command frame. Expected: %zu, Got: %zu",
+                     sizeof(new_camera_status_push_command_frame), data_length);
+            return -1;
+        }
+
+        const new_camera_status_push_command_frame *frame = (const new_camera_status_push_command_frame *)data;
+
+        new_camera_status_push_command_frame *output_frame = (new_camera_status_push_command_frame *)structure_out;
+        output_frame->type_mode_name = frame->type_mode_name;
+        output_frame->mode_name_length = frame->mode_name_length;
+        
+        // Copy mode_name array
+        for (int i = 0; i < 20; i++) {
+            output_frame->mode_name[i] = frame->mode_name[i];
+        }
+        
+        output_frame->type_mode_param = frame->type_mode_param;
+        output_frame->mode_param_length = frame->mode_param_length;
+        
+        // Copy mode_param array
+        for (int i = 0; i < 20; i++) {
+            output_frame->mode_param[i] = frame->mode_param[i];
+        }
+
+        return 0;
+    } else {
+        ESP_LOGE(TAG, "new_camera_status_push_data_parser: Response frames are not supported");
         return -1;
     }
 }

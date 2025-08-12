@@ -617,7 +617,6 @@ static void initUartGps(void)
 static void rx_task_GPS(void *arg)
 {
     static const char *RX_TASK_TAG = "RX_TASK_GPS";
-    esp_log_level_set(RX_TASK_TAG, ESP_LOG_INFO);
     uint8_t* data = (uint8_t*) malloc(RX_BUF_SIZE + 1);
 
     while (1) {

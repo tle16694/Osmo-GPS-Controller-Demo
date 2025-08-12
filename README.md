@@ -8,7 +8,9 @@
 
 ## Introduction
 
-This project provides a set of code running on the ESP32-C6 development board (based on the ESP-IDF framework), demonstrating how to parse, process, and send the DJI R SDK protocol to control the camera. The example program implements basic remote control functions, including: long-pressing the BOOT button to connect to the nearest (compatible) Osmo Action device, single-clicking to control recording, quickly switching modes, and pushing GPS data based on the LC76G GNSS module. Additionally, the program dynamically adjusts the RGB LED display based on the device's status.
+This project provides a set of code running on the ESP32-C6 development board (based on the ESP-IDF framework), demonstrating how to parse, process, and send the DJI R SDK protocol to control the camera. The example program implements basic remote control functions, including: long-pressing the BOOT button to connect to the nearest (compatible) Osmo Action / Osmo 360 device, single-clicking to control recording, quickly switching modes, and pushing GPS data based on the LC76G GNSS module. Additionally, the program dynamically adjusts the RGB LED display based on the device's status.
+
+Before reading this document and the code, it is recommended to first review the [Getting Started Guide](docs/getting_started_guide.md).
 
 ## Key Features
 
@@ -26,7 +28,7 @@ This project provides a set of code running on the ESP32-C6 development board (b
 
 - ESP32-C6-WROOM-1
 - LC76G GNSS Module
-- DJI Osmo Action 5 Pro / DJI Osmo Action 4
+- DJI Osmo 360 / DJI Osmo Action 5 Pro / DJI Osmo Action 4
 
 The hardware connection involves the connection between the ESP32-C6-WROOM-1 and the LC76G GNSS Module. The specific connections are as follows:
 
@@ -159,7 +161,7 @@ For detailed implementation, please refer to: [Add Camera Sleep Feature Example 
 
 For a more comprehensive understanding of the project, refer to the following documents:
 
-* **Q&A**: [FAQ_for_this_project](docs/Q&A.md)
+* **Q&A**: [FAQ_for_this_demo](docs/Q&A.md)
 
 - **ESP-IDF**: [ESP-IDF Official GitHub Repository](https://github.com/espressif/esp-idf/)
 

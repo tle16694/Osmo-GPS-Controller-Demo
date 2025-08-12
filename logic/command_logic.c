@@ -85,7 +85,8 @@ CommandResult send_command(uint8_t cmd_set, uint8_t cmd_id, uint8_t cmd_type, co
 
     // Print ByteArray format for debugging
     // 打印 ByteArray 格式，便于调试
-    printf("ByteArray: [");
+    printf("\033[96m");  // 设置青色输出
+    printf("TX: [");
     for (size_t i = 0; i < frame_length; i++) {
         printf("%02X", protocol_frame[i]);
         if (i < frame_length - 1) {
@@ -93,6 +94,8 @@ CommandResult send_command(uint8_t cmd_set, uint8_t cmd_id, uint8_t cmd_type, co
         }
     }
     printf("]\n");
+    printf("\033[0m");
+    printf("\033[0;32m");
 
     void *structure_data = NULL;
     size_t structure_data_length = 0;

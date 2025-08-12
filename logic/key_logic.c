@@ -73,6 +73,7 @@ static void handle_boot_long_press() {
         ESP_LOGI(TAG, "Data layer not initialized, initializing now...");
         data_init(); 
         data_register_status_update_callback(update_camera_state_handler);
+        data_register_new_status_update_callback(update_new_camera_state_handler);
         if (!is_data_layer_initialized()) {
             ESP_LOGE(TAG, "Failed to initialize data layer");
             return;
@@ -103,7 +104,7 @@ static void handle_boot_long_press() {
 
     /* 相机协议连接 */
     /* Camera protocol connection */
-    uint32_t g_device_id = 0x12345703;                           // 示例设备ID / Example device ID
+    uint32_t g_device_id = 0x12345678;                           // 示例设备ID / Example device ID
     uint8_t g_mac_addr_len = 6;                                  // MAC地址长度 / MAC address length
     int8_t g_mac_addr[6] = {0x38, 0x34, 0x56, 0x78, 0x9A, 0xBC}; // 示例MAC地址 / Example MAC address
     uint32_t g_fw_version = 0x00;                                // 示例固件版本 / Example firmware version
@@ -138,7 +139,7 @@ static void handle_boot_long_press() {
 
     /* 订阅相机状态 */
     /* Subscribe to camera status */
-    res = subscript_camera_status(PUSH_MODE_PERIODIC_WITH_STATE_CHANGE, PUSH_FREQ_10HZ);
+    res = subscript_camera_status(PUSH_MODE_PERIODIC_WITH_STATE_CHANGE, PUSH_FREQ_2HZ);
     if (res == -1) {
         ESP_LOGE(TAG, "Failed to subscribe to camera status.");
         return;

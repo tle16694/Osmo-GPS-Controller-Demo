@@ -2,13 +2,13 @@
 
 ## What is the DJI R SDK Protocol?
 
-The DJI R SDK protocol is a simple, easy-to-use, and stable communication protocol. Third-party developers can use the DJI R SDK protocol to control handheld devices (such as the DJI Osmo Action 5 Pro and DJI Osmo Action 4) and retrieve certain information from them. With the support of the DJI R SDK protocol, the expandability of handheld devices has been enhanced, providing a wider range of application scenarios.
+The DJI R SDK protocol is a simple, easy-to-use, and stable communication protocol. Third-party developers can use the DJI R SDK protocol to control handheld devices (such as the DJI Osmo 360, DJI Osmo Action 5 Pro and DJI Osmo Action 4) and retrieve certain information from them. With the support of the DJI R SDK protocol, the expandability of handheld devices has been enhanced, providing a wider range of application scenarios.
 
 The frame structure of the DJI R SDK protocol is as follows:
 
 <img title="DJI R SDK Protocol" src="./images/dji_r_sdk_protocol.png" alt="DJI R SDK Protocol" data-align="center" width="711">
 
-Here, the CRC-16 value is the result of performing CRC16 checksum on the segment from SOF to SEQ, and the CRC-32 value is the result of performing CRC32 checksum on the segment from SOF to DATA.
+Here, the CRC-16 value is the result of performing CRC16 checksum on the segment from SOF to SEQ, and the CRC-32 value is the result of performing CRC32 checksum on the segment from SOF to DATA. Refer to the Demo files `custom_crc32.c` and `custom_crc16.c` for the CRC implementation.
 
 | Area       | Offset | Size | Description                                                  |
 | ---------- | ------ | ---- | ------------------------------------------------------------ |
@@ -21,6 +21,8 @@ Here, the CRC-16 value is the result of performing CRC16 checksum on the segment
 | CRC-16     | 10     | 2    | Frame checksum (from SOF to SEQ)                             |
 | DATA       | 12     | n    | **DATA segment**, detailed description below                 |
 | CRC-32     | n+12   | 4    | Frame checksum (from SOF to DATA)                            |
+
+Note: The entire data packet uses **little-endian** storage format.
 
 ## DATA Segment
 
@@ -103,12 +105,3 @@ const data_descriptor_t data_descriptors[] = {
     {0x00, 0x11, (data_creator_func_t)key_report_creator, (data_parser_func_t)key_report_parser},
 };
 ```
-
-## BLE Layer
-
-**Question:** What are the characteristic values used in communication between the remote controller and the camera?
-
-| **Characteristic** | **Description**                                              |
-| ------------------ | ------------------------------------------------------------ |
-| 0xFFF4             | Sent by the camera, received by the remote controller. Notification must be enabled. |
-| 0xFFF5             | Received by the camera, sent by the remote controller.       |

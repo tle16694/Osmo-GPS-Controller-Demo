@@ -39,6 +39,10 @@ esp_err_t data_wait_for_result_by_cmd(uint8_t cmd_set, uint8_t cmd_id, int timeo
 
 typedef void (*camera_status_update_cb_t)(void *data);
 void data_register_status_update_callback(camera_status_update_cb_t callback);
+
+typedef void (*new_camera_status_update_cb_t)(void *data);
+void data_register_new_status_update_callback(new_camera_status_update_cb_t callback);
+
 void receive_camera_notify_handler(const uint8_t *raw_data, size_t raw_data_length);
 
 #endif

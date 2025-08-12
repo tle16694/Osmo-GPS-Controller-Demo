@@ -1,3 +1,5 @@
+*.o
+*.log
 .vscode
 /build
 /managed_components

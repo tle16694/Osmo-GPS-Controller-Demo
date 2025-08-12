@@ -920,6 +920,11 @@ void data_register_status_update_callback(camera_status_update_cb_t callback) {
     status_update_callback = callback;
 }
 
+static new_camera_status_update_cb_t new_status_update_callback = NULL;
+void data_register_new_status_update_callback(new_camera_status_update_cb_t callback) {
+    new_status_update_callback = callback;
+}
+
 /**
  * @brief Task for processing notification data
  *        处理通知数据的任务
@@ -972,9 +977,24 @@ static void process_notification_data(const uint8_t *raw_data, size_t raw_data_l
     // 检查帧头
     if (raw_data[0] == 0xAA || raw_data[0] == 0xaa) {
         ESP_LOGI(TAG, "Notification received, attempting to parse...");
-        ESP_LOG_BUFFER_HEX(TAG, raw_data, raw_data_length);  // Print notification content
-                                                             // 打印通知内容
-        
+
+        // ESP_LOG_BUFFER_HEX(TAG, raw_data, raw_data_length);  // Print notification content
+                                                                // 打印通知内容
+
+        // Print notification content in pink color
+        // 用粉色打印通知内容
+        printf("\033[95m");
+        printf("RX: [");
+        for (size_t i = 0; i < raw_data_length; i++) {
+            printf("%02X", raw_data[i]);
+            if (i < raw_data_length - 1) {
+                printf(", ");
+            }
+        }
+        printf("]\n");
+        printf("\033[0m");
+        printf("\033[0;32m");
+                                                             
         // Define parsing result structure
         // 定义解析结果结构体
         protocol_frame_t frame;
@@ -997,12 +1017,14 @@ static void process_notification_data(const uint8_t *raw_data, size_t raw_data_l
             // 假设 protocol_parse_data 返回 void* 类型
             parse_result = protocol_parse_data(frame.data, frame.data_length, frame.cmd_type, &parse_result_length);
             if (parse_result == NULL) {
-                ESP_LOGE(TAG, "Failed to parse data segment, error: %d", ret);
+                ESP_LOGE(TAG, "Failed to parse data segment, parse_result is null");
+                return;
             } else {
                 ESP_LOGI(TAG, "Data segment parsed successfully");
             }
         } else {
             ESP_LOGW(TAG, "Data segment is empty, skipping data parsing");
+            return;
         }
 
         // Get actual seq (assuming frame has seq field)
@@ -1070,6 +1092,23 @@ static void process_notification_data(const uint8_t *raw_data, size_t raw_data_l
                     status_update_callback(status_copy);
                 } else {
                     ESP_LOGE(TAG, "Failed to allocate memory for status update callback");
+                }
+            }
+        }
+
+        // Handle new camera actively pushed status
+        // 新相机主动推送状态处理
+        if (actual_cmd_set == 0x1D && actual_cmd_id == 0x06 && new_status_update_callback) {
+            // Create new memory copy for new status update callback
+            // 为新状态更新回调创建新的内存副本
+            void *new_status_copy = NULL;
+            if (parse_result != NULL && parse_result_length > 0) {
+                new_status_copy = malloc(parse_result_length);
+                if (new_status_copy != NULL) {
+                    memcpy(new_status_copy, parse_result, parse_result_length);
+                    new_status_update_callback(new_status_copy);
+                } else {
+                    ESP_LOGE(TAG, "Failed to allocate memory for new status update callback");
                 }
             }
         }

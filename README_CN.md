@@ -8,7 +8,9 @@
 
 ## 简介
 
-本项目提供了一套运行在 ESP32-C6 开发板上的代码（基于 ESP-IDF 框架），演示了如何解析、处理并发送 DJI R SDK 协议以控制相机。示例程序实现了基本的遥控功能，包括：长按 BOOT 按键连接到最近的（兼容的）Osmo Action 设备、单击控制拍摄、快速切换模式以及基于 LC76G GNSS 模块进行 GPS 数据推送。同时，程序根据设备状态动态调整 RGB LED 灯的显示。
+本项目提供了一套运行在 ESP32-C6 开发板上的代码（基于 ESP-IDF 框架），演示了如何解析、处理并发送 DJI R SDK 协议以控制相机。示例程序实现了基本的遥控功能，包括：长按 BOOT 按键连接到最近的（兼容的）Osmo Action、Osmo 360 设备、单击控制拍摄、快速切换模式以及基于 LC76G GNSS 模块进行 GPS 数据推送。同时，程序根据设备状态动态调整 RGB LED 灯的显示。
+
+在阅读本文档与代码之前，建议先查看 [快速接入指南](docs/getting_started_guide_CN.md)。
 
 ## 主要功能特性
 
@@ -26,7 +28,7 @@
 
 - ESP32-C6-WROOM-1
 - LC76G GNSS Module
-- DJI Osmo Action 5 Pro / DJI Osmo Action 4
+- DJI Osmo 360 / DJI Osmo Action 5 Pro / DJI Osmo Action 4
 
 硬件连接涉及 ESP32-C6-WROOM-1 与 LC76G GNSS Module 之间的连接，具体连接方式如下：
 
@@ -163,17 +165,14 @@ typedef enum {
 
 具体示例参阅文档：[添加相机休眠功能-示例文档](docs/add_camera_sleep_feature_example_CN.md)
 
-## 参考文档
+## 其它参考文档
 
 可以参考以下文档，对项目有更全面的了解：
 
 * **Q&A**：[本项目的常见问题与解答](docs/Q&A_CN.md)
-
-- **ESP-IDF**：[ESP-IDF 官方 GitHub 仓库](https://github.com/espressif/esp-idf/)
-
-- **LC76G GNSS Module**：[LC76G GNSS Module - Waveshare Wiki](https://www.waveshare.net/wiki/LC76G_GPS_Module)
-
-- **ESP32-C6-WROOM-1**：[ESP32-C6-DevKitC-1 v1.2 - ESP32-C6 用户指南](https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/esp32c6/esp32-c6-devkitc-1/user_guide.html)
+* **ESP-IDF**：[ESP-IDF 官方 GitHub 仓库](https://github.com/espressif/esp-idf/)
+* **LC76G GNSS Module**：[LC76G GNSS Module - Waveshare Wiki](https://www.waveshare.net/wiki/LC76G_GPS_Module)
+* **ESP32-C6-WROOM-1**：[ESP32-C6-DevKitC-1 v1.2 - ESP32-C6 用户指南](https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/esp32c6/esp32-c6-devkitc-1/user_guide.html)
 
 ## 关于 PR
 

@@ -1,18 +1,8 @@
-# Q&A
+# FAQ
 
-This document is intended to address some common questions and answers. Before reading it, please ensure you have thoroughly and carefully reviewed all other relevant documentation.
+This document aims to address common questions that may arise during the development process.
 
-[Project README Documentation](../README.md): Introduces the background and structure of the entire open-source project.
-
-[Protocol Parsing Documentation](docs/protocol.md): Quickly understand the basic structure of the DJI R SDK protocol.
-
-[DATA Segment Documentation](./protocol_data_segment.md): Detailed explanation of the various commands and functions supported by the camera.
-
-[Data Layer Documentation](docs/data_layer.md): Design principles and implementation details of the data relay layer, provided for developer reference.
-
-[Add Camera Sleep Feature Example Documentation](docs/add_camera_sleep_feature_example.md): Demonstrates how to quickly add a new control feature to the remote controller.
-
-Note: This demo code is for reference only. If you encounter any bugs, please submit a detailed issue including videos or photos of the reproduction process, output logs, and reproduction steps. We will address the issue as soon as possible. Contributions via PRs are also welcome for fixes and improvements.
+Note: The Demo code is for reference only. If you encounter a bug, please submit an issue with a video or photo of the reproduction process, the output logs, and detailed reproduction steps. We will address it as soon as possible. Contributions via PRs are also welcome to help with fixes and optimizations.
 
 ## 1. Characteristic Values for Communication Between Remote Controller and Camera
 
@@ -86,7 +76,9 @@ For detailed implementation, refer to the **Key Reporting (0011)** feature in th
 
 ## 8. UI Design Corresponding to Camera Modes
 
-Reference: Please refer to the **Camera Status Push (1D02)** function in the [DATA Segment Detailed Documentation](protocol_data_segment.md), which provides detailed explanations on how parameters are displayed and mapped to frame fields under different camera modes.
+Refer to the **Camera Status Push (1D02)** and **New Camera Status Push (1D06)** command sets in the [DATA Segment Detailed Documentation](protocol_data_segment.md), which provides detailed explanations on how parameters are displayed and mapped to frame fields under different camera modes.
+
+Alternatively, you may refer to the DJI Osmo Action Bluetooth Remote Controller interface.
 
 ## 9. When Should GPS Data Be Transmitted?
 
@@ -99,8 +91,19 @@ The remote controller should begin transmitting GPS data at a frequency of 10 
 
 **The unified mode switching command**, on the other hand, allows direct switching to a specific shooting mode. This approach is more explicit and efficient, ideal for scenarios such as “one-click switch to XX mode.”
 
-## 11. How to Implement Shoot/Record Control?
+## 11. How to Implement Shoot / Record Control?
 
 There are two approaches to implementing shoot/record control:
 
 One approach is to use the **Recording Control command (1D03)**. However, we recommend using the shoot/record button in the **Key Reporting command (0011)**, which is equivalent to a short press of the camera’s shutter button. This method simplifies the logic by eliminating the need to determine the current recording state.
+
+## 12. Unable to connect to the camera?
+
+On the camera, pull down the menu, tap **Settings**, go to **Wireless Connection**, ensure that wireless connection is enabled, and reset the connection.
+
+## 13. Osmo Action 4 FFF4 NOTIFY Not Receiving Messages?
+
+Under FFF4 NOTIFY, Osmo Action 4 and Osmo Action 5 Pro behave slightly differently: Osmo Action 5 Pro sends some frames starting with `0x55` (which can be ignored), whereas Osmo Action 4 does not.
+
+It is recommended to use a Bluetooth debugging tool to monitor Osmo Action 4 -> FFF4 NOTIFY in real time, and then send commands to FFF5 for testing. The test command frames can be referenced from the connection request frames in the `connect_cmd_frame.txt` file, or constructed and tested using `connect_cmd_frame_builder.c`.
+

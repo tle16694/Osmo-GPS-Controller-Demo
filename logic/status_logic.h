@@ -39,4 +39,6 @@ int subscript_camera_status(uint8_t push_mode, uint8_t push_freq);
 
 void update_camera_state_handler(void *data);
 
+void update_new_camera_state_handler(void *data);
+
 #endif

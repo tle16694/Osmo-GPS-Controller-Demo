@@ -43,6 +43,16 @@ uint16_t current_record_time = 0;
 uint16_t current_timelapse_interval = 0;
 bool camera_status_initialized = false;
 
+// Global variables for new camera status push command frame
+// 新相机状态推送命令帧的全局变量
+uint8_t current_type_mode_name = 0;
+uint8_t current_mode_name_length = 0;
+uint8_t current_mode_name[20] = {0};
+uint8_t current_type_mode_param = 0;
+uint8_t current_mode_param_length = 0;
+uint8_t current_mode_param[20] = {0};
+
+
 /**
  * @brief Check if camera is recording
  *        检查相机是否正在录制
@@ -78,21 +88,18 @@ void print_camera_status() {
     const char *resolution_str = video_resolution_to_string((video_resolution_t)current_video_resolution);
     const char *fps_str = fps_idx_to_string((fps_idx_t)current_fps_idx);
     const char *eis_str = eis_mode_to_string((eis_mode_t)current_eis_mode);
-    uint8_t user_mode = current_user_mode;
-    uint8_t camera_mode_next_flag = current_camera_mode_next_flag;
-    uint16_t record_time = current_record_time;
-    uint16_t timelapse_interval = current_timelapse_interval;
 
-    ESP_LOGI(TAG, "Current camera status has changed:");
+    ESP_LOGI(TAG, "[1D02] =========== Camera Status Push ===========");
     ESP_LOGI(TAG, "  Mode: %s", mode_str);
     ESP_LOGI(TAG, "  Status: %s", status_str);
-    ESP_LOGI(TAG, "  Resolution: %s", resolution_str);
+    ESP_LOGI(TAG, "  Resolution: %s (value: %d)", resolution_str, current_video_resolution);
     ESP_LOGI(TAG, "  FPS: %s", fps_str);
     ESP_LOGI(TAG, "  EIS: %s", eis_str);
     ESP_LOGI(TAG, "  User mode: %d", current_user_mode);
     ESP_LOGI(TAG, "  Camera mode next flag: %d", current_camera_mode_next_flag);
-    ESP_LOGI(TAG, "  Record time: %d", record_time);
-    ESP_LOGI(TAG, "  Timelapse interval: %d", timelapse_interval);
+    ESP_LOGI(TAG, "  Record time: %d", current_record_time);
+    ESP_LOGI(TAG, "  Timelapse interval: %d", current_timelapse_interval);
+    ESP_LOGI(TAG, "=================================================");
 }
 
 /**
@@ -230,10 +237,64 @@ void update_camera_state_handler(void *data) {
 
     // If state changed or first initialization, print current camera status
     // 如果状态变更或第一次初始化，打印当前相机状态
-    print_camera_status();
     if (state_changed) {
         print_camera_status();
     }
+
+    free(data);
+}
+
+void update_new_camera_state_handler(void *data) {
+    if (!data) {
+        ESP_LOGE(TAG, "update_new_camera_state_handler: Received NULL data.");
+        return;
+    }
+
+    const new_camera_status_push_command_frame *parsed_data = (const new_camera_status_push_command_frame *)data;
+
+    ESP_LOGI(TAG, "[1D06] =============Osmo360============");
+
+    // Update type_mode_name
+    // 更新相机模式名字类型
+    current_type_mode_name = parsed_data->type_mode_name;
+    ESP_LOGI(TAG, "[1D06] Camera mode name type: 0x%02X", current_type_mode_name);
+    
+    // Update mode_name_length
+    // 更新模式名字长度
+    current_mode_name_length = parsed_data->mode_name_length;
+    ESP_LOGI(TAG, "[1D06] Mode name length: %d", current_mode_name_length);
+    
+    // Update mode_name array
+    // 更新模式名字数组
+    memcpy(current_mode_name, parsed_data->mode_name, 20);
+
+    // Ensure null termination for safe string printing
+    // 确保字符串 null 终止以便安全打印
+    char mode_name_str[21] = {0};
+    memcpy(mode_name_str, parsed_data->mode_name, 20);
+    ESP_LOGI(TAG, "[1D06] Mode name: %s", mode_name_str);
+    
+    // Update type_mode_param
+    // 更新相机模式参数类型
+    current_type_mode_param = parsed_data->type_mode_param;
+    ESP_LOGI(TAG, "[1D06] Camera mode parameter type: 0x%02X", current_type_mode_param);
+    
+    // Update mode_param_length
+    // 更新模式参数长度
+    current_mode_param_length = parsed_data->mode_param_length;
+    ESP_LOGI(TAG, "[1D06] Mode parameter length: %d", current_mode_param_length);
+    
+    // Update mode_param array
+    // 更新模式参数数组
+    memcpy(current_mode_param, parsed_data->mode_param, 20);
+
+    // Ensure null termination for safe string printing
+    // 确保字符串 null 终止以便安全打印
+    char mode_param_str[21] = {0};
+    memcpy(mode_param_str, parsed_data->mode_param, 20);
+    ESP_LOGI(TAG, "[1D06] Mode parameters: %s", mode_param_str);
+
+    ESP_LOGI(TAG, "[1D06] ================================");
 
     free(data);
 }

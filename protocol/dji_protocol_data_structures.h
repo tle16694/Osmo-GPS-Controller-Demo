@@ -127,57 +127,72 @@ typedef struct __attribute__((packed)) {
 
 typedef struct __attribute__((packed)) {
     uint8_t push_mode;             // Push mode: 0-Off, 1-Single, 2-Periodic, 3-Periodic+Status change
-                                   // 推送模式：0-关闭，1-单次，2-周期，3-周期+状态变化推送
-    uint8_t push_freq;             // Push frequency in 0.1Hz
-                                   // 推送频率，单位：0.1Hz
+                                   // 推送模式：0-关闭，1-单次，2-周期，3-周期+状态变化后推送一次
+    uint8_t push_freq;             // Push frequency in 0.1Hz, only 20 is allowed
+                                   // 推送频率，单位：0.1Hz，这里只能填 20，固定频率为 2Hz，不可调整
     uint8_t reserved[4];           // Reserved field
                                    // 预留字段
 } camera_status_subscription_command_frame;
 
 typedef struct __attribute__((packed)) {
-    uint8_t camera_mode;           // Camera mode: 0x00-Slow motion, 0x01-Normal mode, ...
-                                   // 相机模式：0x00 - 慢动作模式，0x01 - 普通模式，...
-    uint8_t camera_status;         // Camera status: 0x00-Screen off, 0x01-Live view, ...
-                                   // 相机状态：0x00 - 屏幕关闭，0x01 - 直播，...
-    uint8_t video_resolution;      // Video resolution: e.g., 0x10-1920x1080, ...
-                                   // 视频分辨率：例如 0x10 - 1920x1080，...
-    uint8_t fps_idx;               // Frame rate: e.g., 0x01-24fps, ...
-                                   // 帧率：例如 0x01 - 24fps，...
-    uint8_t eis_mode;              // Electronic image stabilization mode: 0-Off, 1-RS, ...
-                                   // 电子防抖模式：0 - 关闭，1 - RS，...
-    uint16_t record_time;          // Current recording time in seconds
-                                   // 当前录像时间：单位秒
+    uint8_t camera_mode;           // Camera mode: 0x00-Slow motion, 0x01-Video, 0x02-Still time-lapse, 0x05-Photo, 0x0A-Motion time-lapse, 0x1A-Live stream, 0x23-UVC live stream, 0x28-Low light video (Super night scene in Osmo Action 5 Pro), 0x34-Subject follow, others-Use new protocol (refer to New camera status push 1D06)
+                                   // 相机模式：0x00 - 慢动作，0x01 - 视频，0x02 - 静止延时，0x05 - 拍照，0x0A - 运动延时，0x1A - 直播，0x23 - UVC直播，0x28 - 低光视频（Osmo Action 5 Pro中为超级夜景），0x34 - 人物跟随，其它值 - 使用新协议（参考新相机状态推送1D06）
+    uint8_t camera_status;         // Camera status: 0x00-Screen off, 0x01-Live view (including screen on but not recording), 0x02-Playback, 0x03-Photo/video in progress, 0x05-Pre-recording
+                                   // 相机状态：0x00 - 屏幕关闭，0x01 - 直播（包括亮屏未录制），0x02 - 回放，0x03 - 拍照或录像中，0x05 - 预录制中
+    uint8_t video_resolution;      // Video resolution: 10-1080P, 16-4K 16:9, 45-2.7K 16:9, 66-1080P 9:16, 67-2.7K 9:16, 95-2.7K 4:3, 103-4K 4:3, 109-4K 9:16; Photo format (Osmo Action): 4-L, 3-M; Photo format (Osmo 360): 4-Ultra Wide 30MP, 3-Wide 20MP, 2-Standard 12MP
+                                   // 视频分辨率：10 - 1080P，16 - 4K 16:9，45 - 2.7K 16:9，66 - 1080P 9:16，67 - 2.7K 9:16，95 - 2.7K 4:3，103 - 4K 4:3，109 - 4K 9:16；拍照画幅（Osmo Action）：4 - L，3 - M；拍照画幅（Osmo 360）：4 - Ultra Wide 30MP，3 - Wide 20MP，2 - Standard 12MP
+    uint8_t fps_idx;               // Frame rate: 1-24fps, 2-25fps, 3-30fps, 4-48fps, 5-50fps, 6-60fps, 10-100fps, 7-120fps, 19-200fps, 8-240fps; In slow motion mode: multiplier = fps/30; In photo mode: burst count (1-single photo, >1-burst count)
+                                   // 帧率：1 - 24fps，2 - 25fps，3 - 30fps，4 - 48fps，5 - 50fps，6 - 60fps，10 - 100fps，7 - 120fps，19 - 200fps，8 - 240fps；慢动作模式时：倍率 = 帧率/30；拍照模式时：连拍数（1 - 普通拍照只拍一张，>1 - 连拍张数）
+    uint8_t eis_mode;              // Electronic image stabilization mode: 0-Off, 1-RS, 2-HS, 3-RS+, 4-HB
+                                   // 电子防抖模式：0 - 关闭，1 - RS，2 - HS，3 - RS+，4 - HB
+    uint16_t record_time;          // Current recording time (including pre-recording duration) in seconds; In burst mode: burst time limit in milliseconds
+                                   // 当前录像时间（包括预录制时长），单位：秒；连拍状态下：连拍时限，单位：毫秒
     uint8_t fov_type;              // FOV type, reserved field
                                    // FOV类型，保留字段
-    uint8_t photo_ratio;           // Photo aspect ratio: 0-16:9, 1-4:3
-                                   // 照片比例：0 - 16:9，1 - 4:3
+    uint8_t photo_ratio;           // Photo aspect ratio: 0-4:3, 1-16:9
+                                   // 照片比例：0 - 4:3，1 - 16:9
     uint16_t real_time_countdown;  // Real-time countdown in seconds
-                                   // 实时倒计时：单位秒
-    uint16_t timelapse_interval;   // Time-lapse interval in 0.1s
-                                   // 延时摄影时间间隔：单位0.1s
-    uint16_t timelapse_duration;   // Time-lapse duration in seconds
-                                   // 延时摄影时长：单位秒
+                                   // 实时倒计时，单位：秒
+    uint16_t timelapse_interval;   // In still time-lapse mode: shooting interval in 0.1s (e.g., for 0.5s interval, value is 5); In motion time-lapse mode: shooting rate (0 for Auto option)
+                                   // 静止延时摄影模式下：拍摄时间间隔，单位：0.1秒（例如间隔0.5秒时值为5）；运动延时摄影模式下：拍摄速率（Auto选项下值为0）
+    uint16_t timelapse_duration;   // Time-lapse recording duration in seconds
+                                   // 延时录像时长，单位：秒
     uint32_t remain_capacity;      // Remaining SD card capacity in MB
-                                   // SD卡剩余容量：单位MB
+                                   // SD卡剩余容量，单位：MB
     uint32_t remain_photo_num;     // Remaining number of photos
                                    // 剩余拍照张数
     uint32_t remain_time;          // Remaining recording time in seconds
-                                   // 剩余录像时间：单位秒
-    uint8_t user_mode;             // User mode: 0-General mode, 1-Custom mode 1, ...
-                                   // 用户模式：0 - 通用模式，1 - 自定义模式1，...
+                                   // 剩余录像时间，单位：秒
+    uint8_t user_mode;             // User mode (invalid values treated as 0): 0-General mode, 1-Custom mode 1, 2-Custom mode 2, 3-Custom mode 3, 4-Custom mode 4, 5-Custom mode 5
+                                   // 用户模式（非法值按0处理）：0 - 通用模式，1 - 自定义模式1，2 - 自定义模式2，3 - 自定义模式3，4 - 自定义模式4，5 - 自定义模式5
     uint8_t power_mode;            // Power mode: 0-Normal working mode, 3-Sleep mode
                                    // 电源模式：0 - 正常工作模式，3 - 休眠模式
-    uint8_t camera_mode_next_flag; // Pre-switch flag
-                                   // 预切换标志
-    uint8_t temp_over;             // Temperature status: 0-Normal, 1-Temperature warning, ...
-                                   // 温度状态：0 - 正常，1 - 温度警告，...
-    uint32_t photo_countdown_ms;   // Photo countdown parameter in milliseconds
-                                   // 拍照倒计时参数：单位毫秒
-    uint16_t loop_record_sends;    // Loop recording duration in seconds
-                                   // 循环录像时长：单位秒
+    uint8_t camera_mode_next_flag; // Pre-switch flag: In pre-switch mode (e.g., QS), only shows mode name and icon without specific parameters. Indicates target mode to switch to; if not in pre-switch mode, equals camera_mode
+                                   // 预切换标志：在预切换（例如QS）模式下，仅显示模式名称和图标，不展示具体参数。表示即将切换的目标模式；若当前不处于预切换模式，则该字段表示当前模式，与camera_mode保持一致
+    uint8_t temp_over;             // Camera error status: 0-Normal temperature, 1-Temperature warning (can record but high temperature), 2-High temperature (cannot record), 3-Overheating (will shut down)
+                                   // 相机发生了错误：0 - 温度正常，1 - 温度警告（可以录制但温度比较高），2 - 温度高（不可以录制），3 - 温度过高（要关机了）
+    uint32_t photo_countdown_ms;   // Photo countdown parameter in milliseconds (remote controller converts to 0.5s, 1s, 2s, 3s, 5s, 10s options)
+                                   // 拍照倒计时参数，单位：毫秒（遥控器转换为0.5s，1s，2s，3s，5s，10s几个档显示）
+    uint16_t loop_record_sends;    // Loop recording duration in seconds (remote controller shows as off, max, 5m, 20m, 1h options, where off=0, max=65535)
+                                   // 循环录像时长，单位：秒（遥控器转为off，max，5m，20m，1h几档显示，其中off=0，max=65535）
     uint8_t camera_bat_percentage; // Camera battery percentage: 0-100%
                                    // 相机电池电量：0~100%
 } camera_status_push_command_frame;
+
+typedef struct __attribute__((packed)) {
+    uint8_t type_mode_name;        // Camera mode name type: 0x01
+                                   // 相机模式名字类型：0x01
+    uint8_t mode_name_length;      // Mode name length
+                                   // 模式名字长度
+    uint8_t mode_name[20];         // Mode name, ASCII code, max 20 bytes
+                                   // 模式名字，ASCII码，最长不超过20字节
+    uint8_t type_mode_param;       // Camera mode parameter type: 0x02
+                                   // 相机模式参数类型：0x02
+    uint8_t mode_param_length;     // Mode parameter length, ASCII code, max 20 bytes
+                                   // 模式参数长度，ASCII码，最长不超过20字节
+    uint8_t mode_param[20];        // Mode parameters
+                                   // 模式参数
+} new_camera_status_push_command_frame;
 
 typedef struct __attribute__((packed)) {
     uint8_t key_code;              // Key code
