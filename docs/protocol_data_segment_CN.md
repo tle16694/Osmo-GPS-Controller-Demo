@@ -307,7 +307,7 @@ CmdSet = 0x1D，CmdID = 0x06
 | 命令帧 | 0    | 1    | type_mode_name    | uint8_t     | 固定为 0x01                                               |
 |        | 1    | 1    | mode_name_length  | uint8_t     | 模式名字长度                                              |
 |        | 2    | 20   | mode_name         | uint8_t[20] | 模式名字，ASCII码，最长不超过20字节；这个字符串要直接显示 |
-|        | 22   | 1    | type_mode_param   | uint8_t     | 固定为 0x02                                               |
+|        | 22   | 1    | type_mode_param   | uint8_t     | 固定为 0x00                                               |
 |        | 23   | 1    | mode_param_length | uint8_t     | 模式参数长度                                              |
 |        | 24   | 20   | mode_param        | uint8_t[20] | 模式参数，ASCII 码，最长不超过20字节                      |
 
@@ -342,7 +342,7 @@ static uint8_t adv_data[] = {
 
 相机状态变成休眠后，不能再发送任何数据，有可能导致消息堵塞，这很重要。
 
-使用广播唤醒相机的前提是：遥控器在近期内曾成功连接过该相机；相机在进入休眠 30min 内可以通过广播唤醒流程唤醒，30min 后无法被蓝牙遥控器唤醒。
+**使用广播唤醒相机的前提条件**：遥控器需在近期内成功连接过该相机，并且相机进入休眠状态未超过 30 分钟。
 
 Osmo Action 5 Pro 广播包参考（上图为 OA5Pro 的广播，下图为蓝牙遥控器唤醒 OA5Pro 的广播）：
 

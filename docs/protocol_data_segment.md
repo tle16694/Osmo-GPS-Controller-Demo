@@ -301,7 +301,7 @@ CmdSet = 0x1D, CmdID = 0x06
 | Command Frame | 0      | 1    | type_mode_name    | uint8_t     | Fixed to 0x01                                                |
 |               | 1      | 1    | mode_name_length  | uint8_t     | Mode name length                                             |
 |               | 2      | 20   | mode_name         | uint8_t[20] | Mode name, in ASCII code, up to 20 bytes, string, displayed directly |
-|               | 22     | 1    | type_mode_param   | uint8_t     | Fixed to 0x02                                                |
+|               | 22     | 1    | type_mode_param   | uint8_t     | Fixed to 0x00                                                |
 |               | 23     | 1    | mode_param_length | uint8_t     | Mode parameter length                                        |
 |               | 24     | 20   | mode_param        | uint8_t[20] | Mode parameter, in ASCII code, up to 20 bytes                |
 
@@ -337,7 +337,8 @@ The fields '1' to '6' represent the MAC address of the target camera device and 
 
 Once the camera enters sleep mode, it can no longer send any data, which may cause message blockage. This is important.
 
-To use broadcast to wake up the camera, the prerequisite is that the remote controller has successfully connected to the camera within a recent period.
+**Prerequisite for Using Broadcast to Wake Up the Camera**:
+The remote controller must have successfully connected to the camera in the recent past, and the camera must have been in sleep mode for no longer than 30 minutes.
 
 Broadcast Packet Reference for Osmo Action 5 Pro (The above image shows the broadcast from the OA5Pro, and the below image shows the broadcast of the Bluetooth remote waking up the OA5Pro) :
 

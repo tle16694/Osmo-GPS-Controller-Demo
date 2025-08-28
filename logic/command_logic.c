@@ -18,9 +18,11 @@
  */
 
 #include <string.h>
+#include <ctype.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
+#include "esp_err.h"
 
 #include "ble.h"
 #include "data.h"
@@ -37,6 +39,27 @@ uint16_t s_current_seq = 0;
 
 uint16_t generate_seq(void) {
     return s_current_seq += 1;
+}
+
+/**
+ * @brief Send raw bytes directly without protocol frame creation
+ *        直接发送原始字节数据，略去协议帧创建环节
+ *
+ * @param raw_data_string String containing raw bytes in various formats
+ *                        包含原始字节的字符串，支持多种格式
+ * @param timeout_ms Timeout for waiting result (in milliseconds)
+ *                   等待结果的超时时间（以毫秒为单位）
+ * 
+ * @return esp_err_t ESP_OK on success, error code on failure
+ *                   成功返回 ESP_OK，失败返回错误码
+ */
+esp_err_t command_logic_send_raw_bytes(const char *raw_data_string, int timeout_ms) {
+    if (connect_logic_get_state() <= BLE_INIT_COMPLETE) {
+        ESP_LOGE(TAG, "BLE not connected");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    return data_send_raw_bytes(raw_data_string, timeout_ms);
 }
 
 /**
@@ -93,7 +116,7 @@ CommandResult send_command(uint8_t cmd_set, uint8_t cmd_id, uint8_t cmd_type, co
             printf(", ");
         }
     }
-    printf("]\n");
+    printf("] (%zu bytes)\n", frame_length);
     printf("\033[0m");
     printf("\033[0;32m");
 
@@ -431,6 +454,47 @@ key_report_response_frame_t* command_logic_key_report_qs(void) {
         5000
     );
 
+    if (result.structure == NULL) {
+        ESP_LOGE(TAG, "Failed to send command or receive response");
+        return NULL;
+    }
+
+    key_report_response_frame_t *response = (key_report_response_frame_t *)result.structure;
+
+    ESP_LOGI(TAG, "Key Report Response: ret_code=%d", response->ret_code);
+
+    return response;
+}
+
+
+key_report_response_frame_t* command_logic_key_report_snapshot(void) {
+    ESP_LOGI(TAG, "%s: Reporting key press for snapshot", __FUNCTION__);
+
+    if (connect_logic_get_state() != PROTOCOL_CONNECTED) {
+        ESP_LOGE(TAG, "Protocol connection to the camera failed. Current connection state: %d", connect_logic_get_state());
+        return NULL;
+    }
+
+    uint16_t seq = generate_seq();
+
+    key_report_command_frame_t command_frame = {
+        .key_code = 0x03,          // Snapshot key code
+                                   // 拍照按键码
+        .mode = 0x01,              // Fixed as 0x01
+                                   // 固定为 0x01
+        .key_value = 0x00,         // Fixed as 0x00, short press event
+                                   // 固定为 0x00，短按事件
+    };
+
+    CommandResult result = send_command(
+        0x00,
+        0x11,
+        CMD_RESPONSE_OR_NOT,
+        &command_frame,
+        seq,
+        5000
+    );
+    
     if (result.structure == NULL) {
         ESP_LOGE(TAG, "Failed to send command or receive response");
         return NULL;

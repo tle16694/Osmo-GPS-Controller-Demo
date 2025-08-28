@@ -37,6 +37,8 @@ esp_err_t data_wait_for_result_by_seq(uint16_t seq, int timeout_ms, void **out_r
 
 esp_err_t data_wait_for_result_by_cmd(uint8_t cmd_set, uint8_t cmd_id, int timeout_ms, uint16_t *out_seq, void **out_result, size_t *out_result_length);
 
+esp_err_t data_send_raw_bytes(const char *raw_data_string, int timeout_ms);
+
 typedef void (*camera_status_update_cb_t)(void *data);
 void data_register_status_update_callback(camera_status_update_cb_t callback);
 

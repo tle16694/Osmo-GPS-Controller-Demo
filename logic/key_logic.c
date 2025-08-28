@@ -166,8 +166,8 @@ static void handle_boot_single_press() {
     camera_status_t current_status = current_camera_status;
     camera_mode_t current_mode = current_camera_mode;
 
-    // 处理不同的相机状态，这里也可以用按键上报方式实现拍录控制
-    // Handle different camera states, recording control can also be implemented using key report method
+    // 处理不同的相机状态，这里也可以用 按键上报（0011）方式实现拍录控制
+    // Handle different camera states, recording control can also be implemented using Key Reporting (0011) method
     if (current_mode == CAMERA_MODE_PHOTO || current_status == CAMERA_STATUS_LIVE_STREAMING) {
         // 如果当前模式是拍照、直播，开始录制
         // If current mode is photo or live streaming, start recording
@@ -195,9 +195,6 @@ static void handle_boot_single_press() {
         }
     } else {
         ESP_LOGI(TAG, "Camera is in an unsupported mode for recording.");
-        // 尝试唤醒
-        // Try to wake up
-        connect_logic_ble_wakeup();
     }
 
     /* QS 快速切换模式（可放入其他按键） */
@@ -212,6 +209,18 @@ static void handle_boot_single_press() {
     // camera_mode_switch_response_frame_t *switch_response = command_logic_switch_camera_mode(CAMERA_MODE_HYPERLAPSE);
     // if (switch_response != NULL) {
     //     free(switch_response);
+    // }
+
+    /* 发送原始字节测试 */
+    /* Send raw bytes test */
+    // command_logic_send_raw_bytes("AA1600010000000000128C23001103010000263B43CC", 5000);
+
+    /* 休眠状态下快照键上报测试 */
+    /* Snapshot key report test */
+    // connect_logic_ble_wakeup();
+    // key_report_response_frame_t *snapshot_response = command_logic_key_report_snapshot();
+    // if (snapshot_response != NULL) {
+    //     free(snapshot_response);
     // }
 }
 

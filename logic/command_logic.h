@@ -24,6 +24,13 @@
 
 #include "dji_protocol_data_structures.h"
 
+#include <string.h>
+#include <ctype.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_log.h"
+#include "esp_err.h"
+
 uint16_t generate_seq(void);
 
 typedef struct {
@@ -31,6 +38,8 @@ typedef struct {
     size_t length;  // This is not the length of structure, but the length of DATA segment excluding CmdSet and CmdID
                     // 这里的长度并不是 structure 长度，而是 DATA 段除去 CmdSet 和 CmdID 的长度
 } CommandResult;
+
+esp_err_t command_logic_send_raw_bytes(const char *raw_data_string, int timeout_ms);
 
 CommandResult send_command(uint8_t cmd_set, uint8_t cmd_id, uint8_t cmd_type, const void *structure, uint16_t seq, int timeout_ms);
 
@@ -45,5 +54,7 @@ record_control_response_frame_t* command_logic_stop_record(void);
 gps_data_push_response_frame* command_logic_push_gps_data(const gps_data_push_command_frame *gps_data);
 
 key_report_response_frame_t* command_logic_key_report_qs(void);
+
+key_report_response_frame_t* command_logic_key_report_snapshot(void);
 
 #endif

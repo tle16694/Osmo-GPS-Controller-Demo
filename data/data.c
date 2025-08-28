@@ -18,12 +18,14 @@
  */
 
 #include <string.h>
+#include <ctype.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/timers.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include "esp_log.h"
+#include "esp_err.h"
 
 #include "data.h"
 #include "ble.h"
@@ -991,7 +993,7 @@ static void process_notification_data(const uint8_t *raw_data, size_t raw_data_l
                 printf(", ");
             }
         }
-        printf("]\n");
+        printf("] (%zu bytes)\n", raw_data_length);
         printf("\033[0m");
         printf("\033[0;32m");
                                                              
@@ -1162,4 +1164,109 @@ void receive_camera_notify_handler(const uint8_t *raw_data, size_t raw_data_leng
         ESP_LOGE(TAG, "Failed to queue notification data");
         free(data_copy);
     }
+}
+
+/**
+ * @brief Send raw bytes directly without protocol frame creation
+ *        直接发送原始字节数据，略去协议帧创建环节
+ *
+ * @param raw_data_string String containing raw bytes in various formats
+ *                        包含原始字节的字符串，支持多种格式
+ * @param timeout_ms Timeout for waiting result (in milliseconds)
+ *                   等待结果的超时时间（以毫秒为单位）
+ * 
+ * @return esp_err_t ESP_OK on success, error code on failure
+ *                   成功返回 ESP_OK，失败返回错误码
+ */
+esp_err_t data_send_raw_bytes(const char *raw_data_string, int timeout_ms) {
+    ESP_LOGI(TAG, "%s: Sending raw bytes: %s", __FUNCTION__, raw_data_string);
+    
+    if (raw_data_string == NULL) {
+        ESP_LOGE(TAG, "Invalid input: raw_data_string is NULL");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    // Parse the input string to extract bytes
+    // 解析输入字符串以提取字节
+    size_t max_bytes = strlen(raw_data_string) / 2; // Estimate max possible bytes
+    uint8_t *raw_bytes = malloc(max_bytes);
+    if (raw_bytes == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate memory for raw bytes");
+        return ESP_ERR_NO_MEM;
+    }
+
+    size_t byte_count = 0;
+    const char *ptr = raw_data_string;
+    
+    while (*ptr && byte_count < max_bytes) {
+        // Skip whitespace, commas, hyphens, colons
+        // 跳过空格、逗号、连字符、冒号
+        while (*ptr && (*ptr == ' ' || *ptr == ',' || *ptr == '-' || *ptr == ':')) {
+            ptr++;
+        }
+        
+        if (!*ptr) break;
+        
+        // Parse hex byte (support both uppercase and lowercase)
+        // 解析十六进制字节（支持大小写）
+        char hex_str[3] = {0};
+        if (isxdigit((unsigned char)*ptr)) {
+            hex_str[0] = tolower(*ptr++);
+            if (*ptr && isxdigit((unsigned char)*ptr)) {
+                hex_str[1] = tolower(*ptr++);
+            } else {
+                // Single digit, pad with 0
+                // 单个数字，用0填充
+                hex_str[1] = '0';
+                memmove(hex_str + 1, hex_str, 2);
+                hex_str[0] = '0';
+            }
+            
+            // Convert hex string to byte
+            // 将十六进制字符串转换为字节
+            char *endptr;
+            unsigned long value = strtoul(hex_str, &endptr, 16);
+            if (endptr == hex_str + 2) {
+                raw_bytes[byte_count++] = (uint8_t)value;
+            }
+        } else {
+            ptr++; // Skip invalid character
+        }
+    }
+
+    if (byte_count == 0) {
+        ESP_LOGE(TAG, "No valid bytes found in input string");
+        free(raw_bytes);
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    ESP_LOGI(TAG, "Parsed %zu bytes from input string", byte_count);
+
+    // Print parsed bytes for debugging
+    // 打印解析后的字节，便于调试
+    printf("\033[96m");  // 设置青色输出
+    printf("Raw TX: [");
+    for (size_t i = 0; i < byte_count; i++) {
+        printf("%02X", raw_bytes[i]);
+        if (i < byte_count - 1) {
+            printf(", ");
+        }
+    }
+    printf("] (%zu bytes)\n", byte_count);
+    printf("\033[0m");
+
+    // Send the raw bytes directly using a dummy sequence number
+    // 直接发送原始字节，使用虚拟序列号
+    uint16_t dummy_seq = 0xFFFF;
+    esp_err_t ret = data_write_without_response(dummy_seq, raw_bytes, byte_count);
+    
+    free(raw_bytes);
+    
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to send raw bytes, error: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    ESP_LOGI(TAG, "Raw bytes sent successfully");
+    return ESP_OK;
 }
