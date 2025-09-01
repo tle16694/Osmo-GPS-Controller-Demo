@@ -300,10 +300,10 @@ CmdSet = 0x1D, CmdID = 0x06
 | ------------- | ------ | ---- | ----------------- | ----------- | ------------------------------------------------------------ |
 | Command Frame | 0      | 1    | type_mode_name    | uint8_t     | Fixed to 0x01                                                |
 |               | 1      | 1    | mode_name_length  | uint8_t     | Mode name length                                             |
-|               | 2      | 20   | mode_name         | uint8_t[20] | Mode name, in ASCII code, up to 20 bytes, string, displayed directly |
-|               | 22     | 1    | type_mode_param   | uint8_t     | Fixed to 0x00                                                |
-|               | 23     | 1    | mode_param_length | uint8_t     | Mode parameter length                                        |
-|               | 24     | 20   | mode_param        | uint8_t[20] | Mode parameter, in ASCII code, up to 20 bytes                |
+|               | 2      | 21   | mode_name         | uint8_t[21] | Mode name, in ASCII code, up to 20 bytes, string, displayed directly |
+|               | 23     | 1    | type_mode_param   | uint8_t     | Fixed to 0x02                                                |
+|               | 24     | 1    | mode_param_length | uint8_t     | Mode parameter length                                        |
+|               | 25     | 21   | mode_param        | uint8_t[21] | Mode parameter, in ASCII code, up to 20 bytes                |
 
 UI design reference:
 

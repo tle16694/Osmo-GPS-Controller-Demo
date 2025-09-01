@@ -184,13 +184,13 @@ typedef struct __attribute__((packed)) {
                                    // 固定为 0x01
     uint8_t mode_name_length;      // Mode name length
                                    // 模式名字长度
-    uint8_t mode_name[20];         // Mode name, ASCII code, max 20 bytes
+    uint8_t mode_name[21];         // Mode name, ASCII code, max 20 bytes
                                    // 模式名字，ASCII码，最长不超过20字节
-    uint8_t type_mode_param;       // Fixed to 0x00
-                                   // 固定为 0x00
+    uint8_t type_mode_param;       // Fixed to 0x02
+                                   // 固定为 0x02
     uint8_t mode_param_length;     // Mode parameter length, ASCII code, max 20 bytes
                                    // 模式参数长度，ASCII码，最长不超过20字节
-    uint8_t mode_param[20];        // Mode parameters
+    uint8_t mode_param[21];        // Mode parameters
                                    // 模式参数
 } new_camera_status_push_command_frame;
 

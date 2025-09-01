@@ -306,10 +306,10 @@ CmdSet = 0x1D，CmdID = 0x06
 | ------ | ---- | ---- | ----------------- | ----------- | --------------------------------------------------------- |
 | 命令帧 | 0    | 1    | type_mode_name    | uint8_t     | 固定为 0x01                                               |
 |        | 1    | 1    | mode_name_length  | uint8_t     | 模式名字长度                                              |
-|        | 2    | 20   | mode_name         | uint8_t[20] | 模式名字，ASCII码，最长不超过20字节；这个字符串要直接显示 |
-|        | 22   | 1    | type_mode_param   | uint8_t     | 固定为 0x00                                               |
-|        | 23   | 1    | mode_param_length | uint8_t     | 模式参数长度                                              |
-|        | 24   | 20   | mode_param        | uint8_t[20] | 模式参数，ASCII 码，最长不超过20字节                      |
+|        | 2    | 21   | mode_name         | uint8_t[21] | 模式名字，ASCII码，最长不超过20字节；这个字符串要直接显示 |
+|        | 23   | 1    | type_mode_param   | uint8_t     | 固定为 0x02                                               |
+|        | 24   | 1    | mode_param_length | uint8_t     | 模式参数长度                                              |
+|        | 25   | 21   | mode_param        | uint8_t[21] | 模式参数，ASCII 码，最长不超过20字节                      |
 
 UI 设计参考：
 
