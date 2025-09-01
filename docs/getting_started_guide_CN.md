@@ -5,7 +5,7 @@
 
 ## 1. 业务背景
 
-以 DJI 发布的 Osmo Action GPS 蓝牙遥控器为参考，该配件可与 DJI Osmo Action 4、Osmo Action 5 Pro 及 Osmo 360 等设备进行蓝牙连接，实现对相机的交互式控制。用户不仅可以通过遥控器向相机发送各类控制指令，还能实时获取相机的状态信息，从而获得流畅便捷的操控体验。由于 Osmo 系列相机本身不具备 GPS 模块，遥控器可同步推送实时 GPS 数据至 DJI Mimo APP，进而启用仪表盘功能，为用户带来如同 “速度与激情” 般的沉浸式使用体验。
+以 DJI 发布的 Osmo Action GPS 蓝牙遥控器为参考，该配件可与 DJI Osmo Action 4、Osmo Action 5 Pro 及 Osmo 360 等设备进行蓝牙连接，实现对相机的交互式控制。用户不仅可以通过遥控器向相机发送各类控制指令，还能实时获取相机的状态信息，从而获得流畅便捷的操控体验。由于 Osmo 系列相机本身不具备 GPS 模块，遥控器可将实时 GPS 数据推送至相机，进而启用 DJI Mimo APP 中的仪表盘功能，为用户带来如同 “速度与激情” 般的沉浸式使用体验。
 
 为了进一步拓展这一能力，我们计划将其应用到更多便携式设备，例如智能手表。因此，我们推出了 [Osmo-GPS-Controller-Demo](https://github.com/dji-sdk/Osmo-GPS-Controller-Demo)，提供完整的文档与示例代码，帮助开发者快速集成相关功能，共同丰富和完善 DJI Osmo 生态。
 
