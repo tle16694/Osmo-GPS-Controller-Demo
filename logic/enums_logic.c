@@ -53,7 +53,7 @@ const char* camera_mode_to_string(camera_mode_t mode) {
         case CAMERA_MODE_VORTEX_360:
             return "时空凝固 / Vortex (Osmo360)";
         case CAMERA_MODE_PANORAMIC_SUPERNIGHT_360:
-            return "360° 超级夜景 / 360° SuperNight (Osmo360)";
+            return "全景超级夜景 / 360° SuperNight (Osmo360)";
         case CAMERA_MODE_SINGLE_LENS_SUPERNIGHT_360:
             return "单镜头超级夜景 / Single Lens SuperNight (Osmo360)";
 

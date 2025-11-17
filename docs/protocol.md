@@ -2,7 +2,7 @@
 
 ## What is the DJI R SDK Protocol?
 
-The DJI R SDK protocol is a simple, easy-to-use, and stable communication protocol. Third-party developers can use the DJI R SDK protocol to control handheld devices (such as the DJI Osmo 360, DJI Osmo Action 5 Pro and DJI Osmo Action 4) and retrieve certain information from them. With the support of the DJI R SDK protocol, the expandability of handheld devices has been enhanced, providing a wider range of application scenarios.
+The DJI R SDK protocol is a simple, easy-to-use, and stable communication protocol. Third-party developers can use the DJI R SDK protocol to control handheld devices (such as the DJI Osmo 360, DJI Osmo Action 6 / 5 Pro / 4) and retrieve certain information from them. With the support of the DJI R SDK protocol, the expandability of handheld devices has been enhanced, providing a wider range of application scenarios.
 
 The frame structure of the DJI R SDK protocol is as follows:
 

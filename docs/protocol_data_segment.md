@@ -10,6 +10,7 @@ Used to distinguish camera models. The device ID is included when the camera act
 | Osmo Action 5 Pro | 0xFF44                                                       |
 | Osmo 360          | 0xFF66                                                       |
 | Osmo Nano         | Not supported yet. Please wait for a future firmware update. |
+| Osmo Action 6     | 0xFF55                                                       |
 
 Common Return Codes:
 

@@ -2,7 +2,7 @@
 
 ## 什么是 DJI R SDK 协议
 
-DJI R SDK 协议是一套简单易用且稳定可靠的通信协议。第三方可通过 DJI R SDK 协议控制手持设备（例如 DJI Osmo 360、DJI Osmo Action 5 Pro 和 DJI Osmo Action 4），并从中获取部分信息。在 DJI R SDK 协议的支持下，手持设备的扩展性得到了提升，也拥有了更丰富的应用场景。
+DJI R SDK 协议是一套简单易用且稳定可靠的通信协议。第三方可通过 DJI R SDK 协议控制手持设备（例如 DJI Osmo 360、DJI Osmo Action 6 / 5 Pro / 4），并从中获取部分信息。在 DJI R SDK 协议的支持下，手持设备的扩展性得到了提升，也拥有了更丰富的应用场景。
 
 DJI R SDK 帧结构如下所示：
 

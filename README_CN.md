@@ -28,7 +28,7 @@
 
 - ESP32-C6-WROOM-1
 - LC76G GNSS Module
-- DJI Osmo 360 / DJI Osmo Action 5 Pro / DJI Osmo Action 4
+- DJI Osmo 360 或 DJI Osmo Action 6 / 5 Pro / 4
 
 硬件连接涉及 ESP32-C6-WROOM-1 与 LC76G GNSS Module 之间的连接，具体连接方式如下：
 
