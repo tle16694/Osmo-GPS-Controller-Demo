@@ -166,9 +166,9 @@ int connect_logic_ble_connect(bool is_reconnecting) {
 
     /* 3. Wait up to 30 seconds to ensure BLE connection success */
     /* 等待最多 30 秒以确保 BLE 连接成功 */
-    ESP_LOGI(TAG, "Waiting up to 30s for BLE to connect...");
+    ESP_LOGI(TAG, "Waiting up to 15s for BLE to connect...");
     bool connected = false;
-    for (int i = 0; i < 300; i++) { // 300 * 100ms = 30s
+    for (int i = 0; i < 150; i++) { // 150 * 100ms = 15s
         if (s_ble_profile.connection_status.is_connected) {
             ESP_LOGI(TAG, "BLE connected successfully");
             connected = true;
@@ -184,9 +184,9 @@ int connect_logic_ble_connect(bool is_reconnecting) {
 
     /* 4. Wait for characteristic handle discovery completion (up to 30 seconds) */
     /* 等待特征句柄查找完成（最多等待30秒） */
-    ESP_LOGI(TAG, "Waiting up to 30s for characteristic handles discovery...");
+    ESP_LOGI(TAG, "Waiting up to 15s for characteristic handles discovery...");
     bool handles_found = false;
-    for (int i = 0; i < 300; i++) { // 300 * 100ms = 30s
+    for (int i = 0; i < 150; i++) { // 150 * 100ms = 15s
         if (s_ble_profile.handle_discovery.notify_char_handle_found && 
             s_ble_profile.handle_discovery.write_char_handle_found) {
             ESP_LOGI(TAG, "Required characteristic handles found");
@@ -197,6 +197,7 @@ int connect_logic_ble_connect(bool is_reconnecting) {
     }
     if (!handles_found) {
         ESP_LOGW(TAG, "Characteristic handles not found within timeout");
+        ble_disconnect();
         connect_state = BLE_INIT_COMPLETE;
         return -1;
     }
@@ -206,6 +207,7 @@ int connect_logic_ble_connect(bool is_reconnecting) {
     ret = ble_register_notify(s_ble_profile.conn_id, s_ble_profile.notify_char_handle);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to register notify, error: %s", esp_err_to_name(ret));
+        ble_disconnect();
         connect_state = BLE_INIT_COMPLETE;
         return -1;
     }
@@ -214,9 +216,7 @@ int connect_logic_ble_connect(bool is_reconnecting) {
     // 更新状态为 BLE 已连接
     connect_state = BLE_CONNECTED;
 
-    // Delay RGB light display
     // 延迟展示氛围灯
-    vTaskDelay(pdMS_TO_TICKS(2000));
     ESP_LOGI(TAG, "BLE connect successfully");
     return 0;
 }
@@ -356,7 +356,7 @@ wait_for_camera_command:
     void *parse_result = NULL;
     size_t parse_result_length = 0;
     uint16_t received_seq = 0;
-    esp_err_t ret = data_wait_for_result_by_cmd(0x00, 0x19, 30000, &received_seq, &parse_result, &parse_result_length);
+    esp_err_t ret = data_wait_for_result_by_cmd(0x00, 0x19, 60000, &received_seq, &parse_result, &parse_result_length);
 
     if (ret != ESP_OK || parse_result == NULL) {
         ESP_LOGE(TAG, "Timeout or error waiting for camera connection command");

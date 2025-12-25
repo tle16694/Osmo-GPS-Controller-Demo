@@ -20,6 +20,10 @@
 #ifndef LIGHT_LOGIC_H
 #define LIGHT_LOGIC_H
 
+#include <stdint.h>
+
 int init_light_logic(void);
+
+void light_logic_signal_error(uint32_t duration_ms);
 
 #endif

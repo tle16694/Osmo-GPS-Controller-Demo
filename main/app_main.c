@@ -18,12 +18,20 @@
  */
 
 #include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_log.h"
 
 #include "connect_logic.h"
-#include "gps_logic.h"
 #include "key_logic.h"
 #include "light_logic.h"
+#include "product_config.h"
+
+#include "sdkconfig.h"
+
+#if CONFIG_ENABLE_GNSS
+#include "gps_logic.h"
 #include "test_gps.h"
+#endif
 
 /**
  * @brief Main application function, performs initialization and task loop
@@ -38,6 +46,7 @@
 void app_main(void) {
 
     int res = 0;
+    ESP_LOGI("APP", "DJI Osmo Action single-button remote v%s", PRODUCT_VERSION);
 
     /* Initialize RGB light */
     /* 初始化氛围灯 */
@@ -48,9 +57,9 @@ void app_main(void) {
 
     /* Initialize GPS module */
     /* 初始化 GPS 模块 */
+#if CONFIG_ENABLE_GNSS
     initSendGpsDataToCameraTask();
-
-    vTaskDelay(pdMS_TO_TICKS(2000));
+#endif
 
     /* Initialize Bluetooth */
     /* 初始化蓝牙 */

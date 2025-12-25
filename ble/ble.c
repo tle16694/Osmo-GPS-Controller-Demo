@@ -60,7 +60,7 @@ static bool s_found_previous_device = false;  // Whether the original device was
 ble_profile_t s_ble_profile = {
     .conn_id = 0,
     .gattc_if = ESP_GATT_IF_NONE,
-    .remote_bda = {0x60, 0x60, 0x1F, 0x60, 0x11, 0xE7},  // Temporarily store the MAC address of the last connected device; you can initialize it with a test value for debugging purposes.
+    .remote_bda = {0},  // Last connected camera address (loaded/stored by product layer when available)
                                                          // 此处暂存上次连接设备的 MAC 地址，可以初始化一个值进行测试
     .notify_char_handle = 0,
     .write_char_handle = 0,
@@ -124,7 +124,7 @@ void scan_stop_timer_callback(TimerHandle_t xTimer) {
 
 static void trigger_scan_task(void) {
     ESP_LOGI(TAG, "esp_ble_gap_start_scanning...");
-    esp_err_t ret = esp_ble_gap_start_scanning(4);
+    esp_err_t ret = esp_ble_gap_start_scanning(6);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to start scanning: %s", esp_err_to_name(ret));
     }
@@ -237,18 +237,17 @@ esp_err_t ble_init() {
  * @return esp_err_t
  */
 esp_err_t ble_start_scanning_and_connect(void) {
-    // TODO: Add reconnection logic; current implementation has issues and needs to be fixed.
+    // Reconnection mode scans for the last known device address.
     // 补充重连逻辑，当前实现存在问题，待修复
-    if(ble_get_reconnecting()) {
-        return ble_reconnect();
-    }
-
     // Reset scan-related variables
     // 重置扫描相关变量
-    memset(best_addr, 0, sizeof(esp_bd_addr_t));
+    if (ble_get_reconnecting()) {
+        memcpy(best_addr, s_ble_profile.remote_bda, sizeof(esp_bd_addr_t));
+    } else {
+        memset(best_addr, 0, sizeof(esp_bd_addr_t));
+    }
     best_rssi = -128;
     memset(s_remote_device_name, 0, ESP_BLE_ADV_NAME_LEN_MAX);
-    s_is_reconnecting = false;
     s_found_previous_device = false;
 
     // Set scan parameters
@@ -320,7 +319,7 @@ esp_err_t ble_reconnect(void) {
     // 检查是否有有效的上一次连接地址
     bool is_valid = false;
     for (int i = 0; i < ESP_BD_ADDR_LEN; i++) {
-        if (best_addr[i] != 0) {
+        if (s_ble_profile.remote_bda[i] != 0) {
             is_valid = true;
             break;
         }
@@ -331,21 +330,18 @@ esp_err_t ble_reconnect(void) {
         return ESP_FAIL;
     }
 
-    ESP_LOGI(TAG, "Attempting to reconnect to previous device: %s, MAC: %02X:%02X:%02X:%02X:%02X:%02X",
-             s_remote_device_name,
-             best_addr[0], best_addr[1], best_addr[2],
-             best_addr[3], best_addr[4], best_addr[5]);
+    ESP_LOGI(TAG, "Attempting to reconnect to previous device MAC: %02X:%02X:%02X:%02X:%02X:%02X",
+             s_ble_profile.remote_bda[0], s_ble_profile.remote_bda[1], s_ble_profile.remote_bda[2],
+             s_ble_profile.remote_bda[3], s_ble_profile.remote_bda[4], s_ble_profile.remote_bda[5]);
 
     // Set reconnection mode flag
     // 设置重连模式标记
-    s_is_reconnecting = true;
+    ble_set_reconnecting(true);
     s_found_previous_device = false;  // Reset discovery flag
     
     // Start scan task
     // 开始扫描任务
-    trigger_scan_task();
-    
-    return ESP_OK;
+    return ble_start_scanning_and_connect();
 }
 
 /**
@@ -628,6 +624,8 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
                 // 在重连模式下，比对设备地址
                 if (memcmp(best_addr, r->scan_rst.bda, sizeof(esp_bd_addr_t)) == 0) {
                     s_found_previous_device = true;
+                    best_rssi = r->scan_rst.rssi;
+                    esp_ble_gap_stop_scanning();
                     ESP_LOGI(TAG, "Found previous device: %s, RSSI: %d", adv_name_str, r->scan_rst.rssi);
                 }
             } else {

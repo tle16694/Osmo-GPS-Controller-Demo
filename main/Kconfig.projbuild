@@ -1,5 +1,13 @@
 menu "Example Configuration"
 
+    config ENABLE_GNSS
+        bool "Enable GNSS (GPS) support and data push"
+        default n if IDF_TARGET_ESP32
+        default y
+        help
+            Enables LC76G GNSS UART + NMEA parsing and periodic GPS data push to the camera.
+            Disable this when building for hardware without an attached GNSS module.
+
     config EXAMPLE_DUMP_ADV_DATA_AND_SCAN_RESP
         bool "Dump whole adv data and scan response data in example"
         default n
