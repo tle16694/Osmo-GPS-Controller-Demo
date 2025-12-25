@@ -1,25 +1,24 @@
 # TEST PLAN – Production / End‑of‑Line Checklist
 
-ใช้รายการนี้สำหรับทดสอบความพร้อมก่อนส่งมอบ (EOL / QA)
+Use this checklist for production validation (EOL / QA).
 
-## 1) Smoke Test (พื้นฐาน)
-1. แฟลชเฟิร์มแวร์สำเร็จ และบอร์ดบูตโดยไม่รีสตาร์ทวน
-2. LED แสดง BOOT: ติด ~800ms แล้วดับ ~200ms (ครั้งเดียว)
-3. เมื่อยังไม่เชื่อมต่อ: LED เป็น READY (ติด 120ms / ดับ 880ms)
+## 1) Smoke Test
+1. Flash succeeds; device boots without reset loops.
+2. LED shows BOOT: ON ~800 ms, OFF ~200 ms (one time).
+3. When not connected: LED shows READY (ON 120 ms / OFF 880 ms).
 
 ## 2) Pair / Connect
-4. กดค้าง ≥ 2s: LED เป็น CONNECTING (80/120ms)
-5. กล้องยอมรับการเชื่อมต่อและ LED เป็น CONNECTED (ติดค้าง)
+4. Long press (>= 2.0 s): LED shows CONNECTING (80/120 ms).
+5. Camera accepts the connection and LED becomes CONNECTED (solid ON).
 
 ## 3) Command Verification
-6. 1 คลิก: เริ่มอัด / 1 คลิกอีกครั้ง: หยุดอัด (LED ต้องเข้า RECORDING ตอนอัด)
-7. 2 คลิก: MODE_NEXT (กล้องเปลี่ยนโหมด Quick Switch)
-8. 3 คลิก: TAKE_PHOTO (ถ่ายภาพได้จริง)
+6. Single click: start recording; single click again: stop recording (LED must show RECORDING while recording).
+7. Double click: MODE_NEXT (camera switches Quick Switch / mode cycle).
+8. Triple click: TAKE_PHOTO (camera captures a photo).
 
 ## 4) Reconnect & Reset
-9. รีบูตรีโมต: ต้อง auto‑reconnect ได้ (ถ้าเปิดกล้องอยู่ใกล้ ๆ)
-10. กดค้าง ≥ 7s: ล้างการจดจำกล้อง + บังคับจับคู่ใหม่ (ต้องกลับไป CONNECTING)
+9. Reboot the remote: it must auto-reconnect to the last camera (with the camera powered on nearby).
+10. Very long press (>= 7.0 s): clears bonding info and forces re-pairing (LED returns to CONNECTING).
 
 ## 5) Power Behavior
-- ปล่อยทิ้ง (ไม่เชื่อมต่อ) 5 นาที: รีโมตต้องเข้า light sleep และกดปุ่มแล้วตื่นได้
-
+- Leave it idle (not connected) for 5 minutes: remote must enter light sleep and wake on button press.

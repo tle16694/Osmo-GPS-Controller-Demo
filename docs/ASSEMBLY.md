@@ -1,29 +1,28 @@
 # ASSEMBLY – ESP32 DevKit (ESP‑WROOM‑32) One‑Button Remote
 
-เอกสารนี้อธิบายการต่อสายและข้อควรระวังสำหรับประกอบเป็นสินค้า (single‑button BLE remote)
+This document describes wiring, basic hardware precautions, and enclosure notes for a sellable single-button BLE remote build.
 
-## ชิ้นส่วนที่แนะนำ
-- บอร์ด: ESP32 DevKit (ESP‑WROOM‑32)
-- ปุ่มกดชั่วขณะ (momentary push button) แบบ NO
-- LED 1 ดวง (สีใดก็ได้) + R 330Ω (แนะนำ 220–470Ω ตามความสว่างที่ต้องการ)
-- แหล่งจ่าย 5V ผ่าน USB หรือระบบแบตเตอรี่พร้อมเรกูเลเตอร์ 3.3V/5V (ตามบอร์ด)
+## Recommended Parts
+- Board: ESP32 DevKit (ESP‑WROOM‑32)
+- Momentary push button (NO)
+- 1x LED (any color) + 330Ω series resistor (220–470Ω depending on desired brightness)
+- 5V via USB, or a battery system with a suitable regulator (per your DevKit)
 
-## การต่อสาย (PINOUT ตามเฟิร์มแวร์)
-### ปุ่ม (Active‑Low)
-- GPIO27 ↔ ปุ่ม ↔ GND
-- เฟิร์มแวร์เปิด internal pull‑up ให้แล้ว (ไม่ต้องใส่ R pull‑up ภายนอก)
+## Wiring (Firmware Pinout)
+### Button (Active‑Low)
+- `GPIO27` ↔ button ↔ `GND`
+- Firmware enables the internal pull‑up (no external pull‑up resistor required)
 
-### LED สถานะ (Active‑High)
-- GPIO33 → R 330Ω → LED(+)  
-- LED(−) → GND
+### Status LED (Active‑High)
+- `GPIO33` → 330Ω resistor → LED(+)  
+- LED(−) → `GND`
 
-## ข้อควรระวังด้านฮาร์ดแวร์
-- อย่าใช้ปุ่ม BOOT เป็น UI: BOOT/IO0 คงไว้สำหรับแฟลชเท่านั้น
-- หลีกเลี่ยงการใช้ “strapping pins” เป็นวงจรที่อาจดึงระดับผิดตอนบูต (GPIO27/33 ปกติปลอดภัยบน DevKit ทั่วไป)
-- ถ้าสายปุ่มยาวมาก (>20–30cm) ให้พิจารณาเพิ่ม C 100nF ใกล้ขา GPIO27‑GND เพื่อลดสัญญาณรบกวน (เฟิร์มแวร์มี debounce แล้ว)
+## Hardware Notes
+- Do not use the DevKit BOOT button for UI; keep `BOOT/IO0` for flashing only.
+- Avoid wiring that can pull ESP32 strapping pins to the wrong level at boot. (`GPIO27`/`GPIO33` are typically safe on common DevKits.)
+- If the button wire is long (>20–30 cm), consider adding a 100 nF capacitor close to `GPIO27`–`GND` to reduce noise. (Firmware already includes debounce.)
 
-## แนวทางงานกล (Enclosure)
-- เว้นตำแหน่งให้เข้าถึงพอร์ต USB สำหรับแฟลช/อัปเดตเฟิร์มแวร์
-- ถ้าต้องการป้องกันไฟ LED แยงตา ให้ใช้ light‑pipe หรือเจาะรูเล็ก + ฝาครอบขุ่น
-- ยึดบอร์ดให้แน่นและกันการบิดงอที่อาจทำให้สายหลุดจาก GPIO27/33
-
+## Enclosure Notes
+- Provide access to the USB port for flashing/firmware updates.
+- Use a light pipe, small window, or diffuser if you need to reduce LED glare.
+- Secure the board mechanically to prevent flexing that could stress wires on `GPIO27`/`GPIO33`.

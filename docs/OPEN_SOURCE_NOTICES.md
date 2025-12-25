@@ -1,17 +1,16 @@
 # OPEN SOURCE NOTICES (Guidance)
 
-โครงการนี้เป็นงานดัดแปลงจากรีโปเดโมของ DJI และพึ่งพา ESP‑IDF ของ Espressif
+This project is a productized adaptation of DJI's demo repository and depends on Espressif's ESP‑IDF.
 
-## สิ่งที่ควรทำเมื่อทำเป็นสินค้า
-- แนบไฟล์ `LICENSE` ของซอร์สที่รวมมากับสินค้า (เช่น ในเอกสาร/เว็บ/แอป/แพ็กเกจ)
-- หากแจกจ่ายเฟิร์มแวร์แบบไบนารี ให้แนบ “notices” และระบุที่มาของซอร์สโอเพนซอร์สตามเงื่อนไขใบอนุญาต
-- เก็บรายการเวอร์ชันของ ESP‑IDF ที่ใช้ (เช่น v5.5) และคอมโพเนนต์ที่นำมาใช้ เพื่อความสามารถในการตรวจสอบย้อนหลัง
+## What to Do When Shipping a Product
+- Include the upstream `LICENSE` file(s) with your product distribution (documentation/website/app/package as appropriate).
+- If you distribute firmware binaries, include required "notices" and attribution per each license.
+- Keep a record of the ESP‑IDF version used (e.g., v5.5) and any additional components/libraries for traceability.
 
-## ใบอนุญาตที่พบบ่อยในสแตกนี้ (ตัวอย่าง)
-- โค้ดเดโมในรีโปนี้: MIT (ดู `LICENSE`)
-- ESP‑IDF: Apache 2.0 (และอาจมีส่วนย่อยอื่น ๆ ตามคอมโพเนนต์)
+## Common Licenses in This Stack (Examples)
+- Demo code in this repository: MIT (see `LICENSE`)
+- ESP‑IDF: Apache 2.0 (and may include additional component licenses)
 
-## ข้อควรระวัง
-- ห้ามลบข้อความลิขสิทธิ์/ใบอนุญาตที่กำหนดโดยใบอนุญาตต้นฉบับ
-- ถ้าเพิ่มไลบรารีภายนอก ให้เพิ่ม “notices” ให้ครบถ้วนตามเงื่อนไขของไลบรารีนั้น ๆ
-
+## Cautions
+- Do not remove copyright/license notices required by the upstream license(s).
+- If you add third‑party libraries, include their license and notices per their terms.

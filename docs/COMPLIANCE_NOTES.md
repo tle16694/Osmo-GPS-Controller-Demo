@@ -1,19 +1,18 @@
 # COMPLIANCE NOTES (Bluetooth / Regulatory / Trademark)
 
-เอกสารนี้เป็นแนวทางเบื้องต้นสำหรับการทำสินค้าเชิงพาณิชย์ ไม่ใช่คำปรึกษากฎหมาย
+This document is a high-level productization checklist and is not legal advice.
 
 ## Bluetooth / RF Regulatory
-- หาก “จำหน่าย” ผลิตภัณฑ์ที่มีวิทยุ (ESP32) โดยทั่วไปต้องพิจารณากฎระเบียบของประเทศปลายทาง เช่น FCC (สหรัฐฯ), CE/RED (EU), UKCA, MIC (ญี่ปุ่น), NCC (ไต้หวัน) ฯลฯ
-- แม้โมดูล ESP‑WROOM‑32 บางรุ่นจะมีการรับรองบางส่วน (modular approval) แต่สินค้าโดยรวม (enclosure, layout, antenna, power) ยังอาจต้องทดสอบ/รับรองเพิ่มเติม
-- ต้องจัดทำเอกสารผู้ใช้/ฉลาก/คำเตือนตามข้อกำหนด และเก็บบันทึกการทดสอบการปล่อยคลื่นรบกวน (EMI/EMC) ตามที่เกี่ยวข้อง
-- หากต้องการใช้โลโก้/คำว่า Bluetooth® ในการตลาด อาจต้องปฏิบัติตามข้อกำหนดของ Bluetooth SIG (เช่น qualification, listing) ตามประเภทผลิตภัณฑ์
+- If you sell a product containing a radio (ESP32), you must comply with the destination country's requirements (e.g., FCC (US), CE/RED (EU), UKCA (UK), MIC (JP), NCC (TW), etc.).
+- Even when using an ESP‑WROOM‑32 module with modular approval, the final product (enclosure, antenna environment, PCB/layout, power supply, shielding) may still require additional testing/certification.
+- Maintain required user documentation/labels/warnings and keep EMI/EMC test records as applicable.
+- If you want to use the Bluetooth® name/logo in marketing, follow Bluetooth SIG requirements (e.g., qualification/listing) appropriate for your product category.
 
-## ความปลอดภัยของข้อมูล / การจับคู่
-- โปรโตคอลการเชื่อมต่อและการอนุมัติที่แสดงบนกล้อง (verify_mode) เป็นส่วนหนึ่งของ workflow การจับคู่
-- ควรกำหนดนโยบายการล้างข้อมูลการจับคู่ (Factory Reset) ให้ชัดเจนในคู่มือผู้ใช้
+## Data Security / Pairing
+- The camera-side confirmation/verification flow (verify_mode) is part of the pairing workflow; make sure your user guide explains it clearly.
+- Document a clear factory-reset policy (how to clear pairing/bonding data, and what the user should expect).
 
 ## Trademark / Branding (DJI)
-- ผลิตภัณฑ์นี้ “ไม่ใช่ผลิตภัณฑ์อย่างเป็นทางการของ DJI” และไม่ได้รับการสนับสนุน/รับรองจาก DJI
-- หลีกเลี่ยงการใช้ข้อความที่ทำให้เข้าใจผิดว่าเป็น “Official DJI” หรือ “DJI‑certified”
-- การอ้างถึงชื่อ “DJI”, “Osmo”, “Osmo Action” ให้ทำในลักษณะอ้างอิงความเข้ากันได้ (compatibility) และใส่ข้อความสงวนสิทธิ์เครื่องหมายการค้าในเอกสาร/กล่องสินค้า
-
+- This product is not an official DJI product and is not endorsed/certified by DJI.
+- Avoid marketing language that implies "Official DJI" or "DJI‑certified".
+- If you reference "DJI", "Osmo", or "Osmo Action", do so only for compatibility purposes and include appropriate trademark disclaimers in documentation/packaging.

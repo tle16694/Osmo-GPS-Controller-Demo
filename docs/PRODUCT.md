@@ -1,49 +1,48 @@
-# DJI Osmo Action 5 Pro – Single‑Button BLE Remote (ESP32 DevKit)
+# DJI Osmo Action 5 Pro - Single-Button BLE Remote (ESP32 DevKit)
 
-เฟิร์มแวร์นี้พอร์ตจากเดโมอย่างเป็นทางการของ DJI เพื่อทำรีโมต BLE แบบ “ปุ่มเดียว” สำหรับ ESP32 DevKit (ESP‑WROOM‑32) โดยออกแบบให้ใช้งานได้จริงในเชิงพาณิชย์: จับคู่/เชื่อมต่อใหม่อัตโนมัติ, คำสั่งหลักครบ, และมีโหมดประหยัดพลังงาน
+This firmware is a hardened port of DJI's official demo into a sellable single-button BLE remote for ESP32 DevKit (ESP-WROOM-32): first-run pairing, automatic reconnect, full single-button command mapping, and power-friendly behavior.
 
-## ความสามารถหลัก
-- เชื่อมต่อ BLE + โปรโตคอล DJI R SDK เพื่อควบคุมกล้อง
-- ปุ่มเดียว: อัด/หยุดอัด, เปลี่ยนโหมด, ถ่ายภาพ, จับคู่/เชื่อมต่อใหม่, ล้างการจับคู่
-- จดจำกล้องล่าสุดใน NVS และ auto‑reconnect ตอนบูต
-- ไม่ต้องมี GNSS / GPS (ค่าเริ่มต้นปิด)
-- LED เดี่ยว (GPIO33) แสดงสถานะชัดเจน
-- เมื่อไม่เชื่อมต่อและไม่มีการกดปุ่ม 5 นาที จะเข้าสู่ light sleep และตื่นด้วยปุ่ม
+## Key Features
+- BLE + DJI R SDK protocol control
+- Single-button UX: record toggle, mode next (quick switch), take photo, pair/reconnect, factory reset link
+- Stores last bonded camera info in NVS and auto-reconnects on boot
+- No GNSS hardware required (GNSS disabled by default on ESP32)
+- Single status LED (GPIO33) with explicit patterns
+- If not connected and no user input for 5 minutes, enters light sleep and wakes on the button
 
-## การใช้งาน (ปุ่มเดียว)
-หน้าต่างนับหลายคลิก: 380ms หลัง “ปล่อยปุ่ม” ครั้งสุดท้าย
+## Single-Button UX Mapping
+Multi-click finalize window: 380ms after the last button release.
 
-- 1 คลิก: RECORD_TOGGLE (เริ่ม/หยุดอัด)
-- 2 คลิก: MODE_NEXT (Quick Switch / เปลี่ยนโหมดถัดไป)
-- 3 คลิก: TAKE_PHOTO (ถ่ายภาพ)
-- กดค้าง ≥ 2.0s: PAIR_OR_RECONNECT (จับคู่/เชื่อมต่อใหม่)
-- กดค้าง ≥ 7.0s: FACTORY_RESET_LINK (ล้างการจดจำกล้อง + บังคับจับคู่ใหม่)
+- Single click: RECORD_TOGGLE
+- Double click: MODE_NEXT (Quick Switch / cycle)
+- Triple click: TAKE_PHOTO
+- Long press >= 2.0s: PAIR_OR_RECONNECT
+- Very long press >= 7.0s: FACTORY_RESET_LINK (clear bond + force re-pair)
 
-## รูปแบบไฟ LED (GPIO33, LED เดียว)
-- BOOT: ติด 800ms แล้วดับ 200ms (ครั้งเดียว)
-- READY (ยังไม่เชื่อมต่อ): ติด 120ms / ดับ 880ms
-- CONNECTING: ติด 80ms / ดับ 120ms
-- CONNECTED (โปรโตคอลพร้อม): ติดค้าง
-- RECORDING: ติด 180ms / ดับ 820ms
-- ERROR: กระพริบ 70/70ms จำนวน 3 ครั้ง แล้วพัก 700ms (วนซ้ำช่วงสั้น ๆ)
+## Status LED Patterns (GPIO33, single LED)
+- BOOT: 800ms ON then 200ms OFF once
+- READY (not connected): 120ms ON / 880ms OFF
+- CONNECTING: 80ms ON / 120ms OFF
+- CONNECTED (protocol ready): solid ON
+- RECORDING: 180ms ON / 820ms OFF
+- ERROR: 70/70ms triple blink then 700ms pause
 
-## การจับคู่ครั้งแรก
-1) เปิดกล้องและเปิด BLE/รีโมตคอนโทรลของกล้อง (ตามเมนูกล้อง)
-2) กดค้างปุ่มรีโมต ≥ 2.0s
-3) ไฟจะเข้า CONNECTING และกล้องอาจขึ้นหน้าต่างยืนยัน/รหัส (ขึ้นกับสถานะการจับคู่)
-4) หลังเชื่อมต่อสำเร็จ ไฟจะติดค้าง (CONNECTED)
+## First-Time Pairing
+1) Power on the camera and enable its BLE/remote-control feature.
+2) Press and hold the remote button for >= 2.0s.
+3) LED enters CONNECTING; the camera may prompt for confirmation depending on pairing state.
+4) On success, LED becomes solid ON (CONNECTED).
 
-## การเชื่อมต่ออัตโนมัติ
-- ถ้าเคยจับคู่แล้ว: รีโมตจะพยายามเชื่อมต่อกล้องล่าสุดอัตโนมัติหลังบูต
-- ถ้าเชื่อมต่อกล้องล่าสุดไม่สำเร็จ: จะ fallback ไปสแกนหา “กล้องที่เข้ากันได้ที่ใกล้ที่สุด”
+## Auto-Reconnect
+- If previously paired: the remote attempts to reconnect to the last bonded camera on boot.
+- If reconnect fails: it falls back to scanning and connecting to the nearest compatible camera.
 
-## ล้างการจับคู่ (Factory Reset Link)
-กดค้างปุ่ม ≥ 7.0s เพื่อ:
-- ล้างข้อมูลที่จดจำกล้องใน NVS
-- บังคับเข้าสู่โหมดจับคู่ใหม่ (CONNECTING)
+## Factory Reset Link
+Press and hold the button for >= 7.0s to:
+- Clear bonded camera info in NVS
+- Force a fresh pairing flow (CONNECTING)
 
-## ข้อควรทราบ
-- ปุ่ม BOOT บนบอร์ด ESP32 ใช้สำหรับแฟลชเท่านั้น ไม่ถูกใช้เป็น UI
-- หากกด RECORD_TOGGLE ตอนกล้องอยู่โหมดภาพนิ่ง เฟิร์มแวร์จะพยายามสลับไปโหมดวิดีโอแล้วค่อยเริ่มอัด
-- การถ่ายภาพ: ถ้า “ชัตเตอร์ตรง” ไม่ตอบสนอง เฟิร์มแวร์จะสลับไปโหมดภาพนิ่งแล้วลองถ่ายซ้ำ
-
+## Notes
+- The ESP32 DevKit BOOT button is not used for UI (BOOT remains for flashing only).
+- If RECORD_TOGGLE is pressed while in photo mode, firmware attempts to switch to video then start recording.
+- TAKE_PHOTO: if a direct shutter report fails, firmware switches to photo mode and retries.

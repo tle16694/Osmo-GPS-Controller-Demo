@@ -1,0 +1,1950 @@
+diff --git a/ble/ble.c b/ble/ble.c
+index 196dd8a..1977794 100644
+--- a/ble/ble.c
++++ b/ble/ble.c
+@@ -60,7 +60,7 @@ static bool s_found_previous_device = false;  // Whether the original device was
+ ble_profile_t s_ble_profile = {
+     .conn_id = 0,
+     .gattc_if = ESP_GATT_IF_NONE,
+-    .remote_bda = {0x60, 0x60, 0x1F, 0x60, 0x11, 0xE7},  // Temporarily store the MAC address of the last connected device; you can initialize it with a test value for debugging purposes.
++    .remote_bda = {0},  // Last connected camera address (loaded/stored by product layer when available)
+                                                          // 此处暂存上次连接设备的 MAC 地址，可以初始化一个值进行测试
+     .notify_char_handle = 0,
+     .write_char_handle = 0,
+@@ -124,7 +124,7 @@ void scan_stop_timer_callback(TimerHandle_t xTimer) {
+ 
+ static void trigger_scan_task(void) {
+     ESP_LOGI(TAG, "esp_ble_gap_start_scanning...");
+-    esp_err_t ret = esp_ble_gap_start_scanning(4);
++    esp_err_t ret = esp_ble_gap_start_scanning(6);
+     if (ret != ESP_OK) {
+         ESP_LOGE(TAG, "Failed to start scanning: %s", esp_err_to_name(ret));
+     }
+@@ -237,18 +237,17 @@ esp_err_t ble_init() {
+  * @return esp_err_t
+  */
+ esp_err_t ble_start_scanning_and_connect(void) {
+-    // TODO: Add reconnection logic; current implementation has issues and needs to be fixed.
++    // Reconnection mode scans for the last known device address.
+     // 补充重连逻辑，当前实现存在问题，待修复
+-    if(ble_get_reconnecting()) {
+-        return ble_reconnect();
+-    }
+-
+     // Reset scan-related variables
+     // 重置扫描相关变量
+-    memset(best_addr, 0, sizeof(esp_bd_addr_t));
++    if (ble_get_reconnecting()) {
++        memcpy(best_addr, s_ble_profile.remote_bda, sizeof(esp_bd_addr_t));
++    } else {
++        memset(best_addr, 0, sizeof(esp_bd_addr_t));
++    }
+     best_rssi = -128;
+     memset(s_remote_device_name, 0, ESP_BLE_ADV_NAME_LEN_MAX);
+-    s_is_reconnecting = false;
+     s_found_previous_device = false;
+ 
+     // Set scan parameters
+@@ -320,7 +319,7 @@ esp_err_t ble_reconnect(void) {
+     // 检查是否有有效的上一次连接地址
+     bool is_valid = false;
+     for (int i = 0; i < ESP_BD_ADDR_LEN; i++) {
+-        if (best_addr[i] != 0) {
++        if (s_ble_profile.remote_bda[i] != 0) {
+             is_valid = true;
+             break;
+         }
+@@ -331,21 +330,18 @@ esp_err_t ble_reconnect(void) {
+         return ESP_FAIL;
+     }
+ 
+-    ESP_LOGI(TAG, "Attempting to reconnect to previous device: %s, MAC: %02X:%02X:%02X:%02X:%02X:%02X",
+-             s_remote_device_name,
+-             best_addr[0], best_addr[1], best_addr[2],
+-             best_addr[3], best_addr[4], best_addr[5]);
++    ESP_LOGI(TAG, "Attempting to reconnect to previous device MAC: %02X:%02X:%02X:%02X:%02X:%02X",
++             s_ble_profile.remote_bda[0], s_ble_profile.remote_bda[1], s_ble_profile.remote_bda[2],
++             s_ble_profile.remote_bda[3], s_ble_profile.remote_bda[4], s_ble_profile.remote_bda[5]);
+ 
+     // Set reconnection mode flag
+     // 设置重连模式标记
+-    s_is_reconnecting = true;
++    ble_set_reconnecting(true);
+     s_found_previous_device = false;  // Reset discovery flag
+     
+     // Start scan task
+     // 开始扫描任务
+-    trigger_scan_task();
+-    
+-    return ESP_OK;
++    return ble_start_scanning_and_connect();
+ }
+ 
+ /**
+@@ -628,6 +624,8 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
+                 // 在重连模式下，比对设备地址
+                 if (memcmp(best_addr, r->scan_rst.bda, sizeof(esp_bd_addr_t)) == 0) {
+                     s_found_previous_device = true;
++                    best_rssi = r->scan_rst.rssi;
++                    esp_ble_gap_stop_scanning();
+                     ESP_LOGI(TAG, "Found previous device: %s, RSSI: %d", adv_name_str, r->scan_rst.rssi);
+                 }
+             } else {
+diff --git a/dependencies.lock b/dependencies.lock
+deleted file mode 100644
+index e2a23f4..0000000
+--- a/dependencies.lock
++++ /dev/null
+@@ -1,21 +0,0 @@
+-dependencies:
+-  espressif/led_strip:
+-    component_hash: 28c6509a727ef74925b372ed404772aeedf11cce10b78c3f69b3c66799095e2d
+-    dependencies:
+-    - name: idf
+-      registry_url: https://components.espressif.com
+-      require: private
+-      version: '>=4.4'
+-    source:
+-      registry_url: https://components.espressif.com/
+-      type: service
+-    version: 2.5.5
+-  idf:
+-    source:
+-      type: idf
+-    version: 5.5.0
+-direct_dependencies:
+-- espressif/led_strip
+-manifest_hash: a9af7824fb34850fbe175d5384052634b3c00880abb2d3a7937e666d07603998
+-target: esp32c6
+-version: 2.0.0
+diff --git a/docs/ASSEMBLY.md b/docs/ASSEMBLY.md
+new file mode 100644
+index 0000000..378d863
+--- /dev/null
++++ b/docs/ASSEMBLY.md
+@@ -0,0 +1,28 @@
++# ASSEMBLY – ESP32 DevKit (ESP‑WROOM‑32) One‑Button Remote
++
++This document describes wiring, basic hardware precautions, and enclosure notes for a sellable single-button BLE remote build.
++
++## Recommended Parts
++- Board: ESP32 DevKit (ESP‑WROOM‑32)
++- Momentary push button (NO)
++- 1x LED (any color) + 330Ω series resistor (220–470Ω depending on desired brightness)
++- 5V via USB, or a battery system with a suitable regulator (per your DevKit)
++
++## Wiring (Firmware Pinout)
++### Button (Active‑Low)
++- `GPIO27` ↔ button ↔ `GND`
++- Firmware enables the internal pull‑up (no external pull‑up resistor required)
++
++### Status LED (Active‑High)
++- `GPIO33` → 330Ω resistor → LED(+)  
++- LED(−) → `GND`
++
++## Hardware Notes
++- Do not use the DevKit BOOT button for UI; keep `BOOT/IO0` for flashing only.
++- Avoid wiring that can pull ESP32 strapping pins to the wrong level at boot. (`GPIO27`/`GPIO33` are typically safe on common DevKits.)
++- If the button wire is long (>20–30 cm), consider adding a 100 nF capacitor close to `GPIO27`–`GND` to reduce noise. (Firmware already includes debounce.)
++
++## Enclosure Notes
++- Provide access to the USB port for flashing/firmware updates.
++- Use a light pipe, small window, or diffuser if you need to reduce LED glare.
++- Secure the board mechanically to prevent flexing that could stress wires on `GPIO27`/`GPIO33`.
+diff --git a/docs/COMPLIANCE_NOTES.md b/docs/COMPLIANCE_NOTES.md
+new file mode 100644
+index 0000000..a1063cf
+--- /dev/null
++++ b/docs/COMPLIANCE_NOTES.md
+@@ -0,0 +1,18 @@
++# COMPLIANCE NOTES (Bluetooth / Regulatory / Trademark)
++
++This document is a high-level productization checklist and is not legal advice.
++
++## Bluetooth / RF Regulatory
++- If you sell a product containing a radio (ESP32), you must comply with the destination country's requirements (e.g., FCC (US), CE/RED (EU), UKCA (UK), MIC (JP), NCC (TW), etc.).
++- Even when using an ESP‑WROOM‑32 module with modular approval, the final product (enclosure, antenna environment, PCB/layout, power supply, shielding) may still require additional testing/certification.
++- Maintain required user documentation/labels/warnings and keep EMI/EMC test records as applicable.
++- If you want to use the Bluetooth® name/logo in marketing, follow Bluetooth SIG requirements (e.g., qualification/listing) appropriate for your product category.
++
++## Data Security / Pairing
++- The camera-side confirmation/verification flow (verify_mode) is part of the pairing workflow; make sure your user guide explains it clearly.
++- Document a clear factory-reset policy (how to clear pairing/bonding data, and what the user should expect).
++
++## Trademark / Branding (DJI)
++- This product is not an official DJI product and is not endorsed/certified by DJI.
++- Avoid marketing language that implies "Official DJI" or "DJI‑certified".
++- If you reference "DJI", "Osmo", or "Osmo Action", do so only for compatibility purposes and include appropriate trademark disclaimers in documentation/packaging.
+diff --git a/docs/OPEN_SOURCE_NOTICES.md b/docs/OPEN_SOURCE_NOTICES.md
+new file mode 100644
+index 0000000..55db736
+--- /dev/null
++++ b/docs/OPEN_SOURCE_NOTICES.md
+@@ -0,0 +1,16 @@
++# OPEN SOURCE NOTICES (Guidance)
++
++This project is a productized adaptation of DJI's demo repository and depends on Espressif's ESP‑IDF.
++
++## What to Do When Shipping a Product
++- Include the upstream `LICENSE` file(s) with your product distribution (documentation/website/app/package as appropriate).
++- If you distribute firmware binaries, include required "notices" and attribution per each license.
++- Keep a record of the ESP‑IDF version used (e.g., v5.5) and any additional components/libraries for traceability.
++
++## Common Licenses in This Stack (Examples)
++- Demo code in this repository: MIT (see `LICENSE`)
++- ESP‑IDF: Apache 2.0 (and may include additional component licenses)
++
++## Cautions
++- Do not remove copyright/license notices required by the upstream license(s).
++- If you add third‑party libraries, include their license and notices per their terms.
+diff --git a/docs/PRODUCT.md b/docs/PRODUCT.md
+new file mode 100644
+index 0000000..fbd8dbb
+--- /dev/null
++++ b/docs/PRODUCT.md
+@@ -0,0 +1,48 @@
++# DJI Osmo Action 5 Pro - Single-Button BLE Remote (ESP32 DevKit)
++
++This firmware is a hardened port of DJI's official demo into a sellable single-button BLE remote for ESP32 DevKit (ESP-WROOM-32): first-run pairing, automatic reconnect, full single-button command mapping, and power-friendly behavior.
++
++## Key Features
++- BLE + DJI R SDK protocol control
++- Single-button UX: record toggle, mode next (quick switch), take photo, pair/reconnect, factory reset link
++- Stores last bonded camera info in NVS and auto-reconnects on boot
++- No GNSS hardware required (GNSS disabled by default on ESP32)
++- Single status LED (GPIO33) with explicit patterns
++- If not connected and no user input for 5 minutes, enters light sleep and wakes on the button
++
++## Single-Button UX Mapping
++Multi-click finalize window: 380ms after the last button release.
++
++- Single click: RECORD_TOGGLE
++- Double click: MODE_NEXT (Quick Switch / cycle)
++- Triple click: TAKE_PHOTO
++- Long press >= 2.0s: PAIR_OR_RECONNECT
++- Very long press >= 7.0s: FACTORY_RESET_LINK (clear bond + force re-pair)
++
++## Status LED Patterns (GPIO33, single LED)
++- BOOT: 800ms ON then 200ms OFF once
++- READY (not connected): 120ms ON / 880ms OFF
++- CONNECTING: 80ms ON / 120ms OFF
++- CONNECTED (protocol ready): solid ON
++- RECORDING: 180ms ON / 820ms OFF
++- ERROR: 70/70ms triple blink then 700ms pause
++
++## First-Time Pairing
++1) Power on the camera and enable its BLE/remote-control feature.
++2) Press and hold the remote button for >= 2.0s.
++3) LED enters CONNECTING; the camera may prompt for confirmation depending on pairing state.
++4) On success, LED becomes solid ON (CONNECTED).
++
++## Auto-Reconnect
++- If previously paired: the remote attempts to reconnect to the last bonded camera on boot.
++- If reconnect fails: it falls back to scanning and connecting to the nearest compatible camera.
++
++## Factory Reset Link
++Press and hold the button for >= 7.0s to:
++- Clear bonded camera info in NVS
++- Force a fresh pairing flow (CONNECTING)
++
++## Notes
++- The ESP32 DevKit BOOT button is not used for UI (BOOT remains for flashing only).
++- If RECORD_TOGGLE is pressed while in photo mode, firmware attempts to switch to video then start recording.
++- TAKE_PHOTO: if a direct shutter report fails, firmware switches to photo mode and retries.
+diff --git a/docs/TEST_PLAN.md b/docs/TEST_PLAN.md
+new file mode 100644
+index 0000000..f448d43
+--- /dev/null
++++ b/docs/TEST_PLAN.md
+@@ -0,0 +1,24 @@
++# TEST PLAN – Production / End‑of‑Line Checklist
++
++Use this checklist for production validation (EOL / QA).
++
++## 1) Smoke Test
++1. Flash succeeds; device boots without reset loops.
++2. LED shows BOOT: ON ~800 ms, OFF ~200 ms (one time).
++3. When not connected: LED shows READY (ON 120 ms / OFF 880 ms).
++
++## 2) Pair / Connect
++4. Long press (>= 2.0 s): LED shows CONNECTING (80/120 ms).
++5. Camera accepts the connection and LED becomes CONNECTED (solid ON).
++
++## 3) Command Verification
++6. Single click: start recording; single click again: stop recording (LED must show RECORDING while recording).
++7. Double click: MODE_NEXT (camera switches Quick Switch / mode cycle).
++8. Triple click: TAKE_PHOTO (camera captures a photo).
++
++## 4) Reconnect & Reset
++9. Reboot the remote: it must auto-reconnect to the last camera (with the camera powered on nearby).
++10. Very long press (>= 7.0 s): clears bonding info and forces re-pairing (LED returns to CONNECTING).
++
++## 5) Power Behavior
++- Leave it idle (not connected) for 5 minutes: remote must enter light sleep and wake on button press.
+diff --git a/logic/connect_logic.c b/logic/connect_logic.c
+index 18ada56..dc52cf8 100644
+--- a/logic/connect_logic.c
++++ b/logic/connect_logic.c
+@@ -166,9 +166,9 @@ int connect_logic_ble_connect(bool is_reconnecting) {
+ 
+     /* 3. Wait up to 30 seconds to ensure BLE connection success */
+     /* 等待最多 30 秒以确保 BLE 连接成功 */
+-    ESP_LOGI(TAG, "Waiting up to 30s for BLE to connect...");
++    ESP_LOGI(TAG, "Waiting up to 15s for BLE to connect...");
+     bool connected = false;
+-    for (int i = 0; i < 300; i++) { // 300 * 100ms = 30s
++    for (int i = 0; i < 150; i++) { // 150 * 100ms = 15s
+         if (s_ble_profile.connection_status.is_connected) {
+             ESP_LOGI(TAG, "BLE connected successfully");
+             connected = true;
+@@ -184,9 +184,9 @@ int connect_logic_ble_connect(bool is_reconnecting) {
+ 
+     /* 4. Wait for characteristic handle discovery completion (up to 30 seconds) */
+     /* 等待特征句柄查找完成（最多等待30秒） */
+-    ESP_LOGI(TAG, "Waiting up to 30s for characteristic handles discovery...");
++    ESP_LOGI(TAG, "Waiting up to 15s for characteristic handles discovery...");
+     bool handles_found = false;
+-    for (int i = 0; i < 300; i++) { // 300 * 100ms = 30s
++    for (int i = 0; i < 150; i++) { // 150 * 100ms = 15s
+         if (s_ble_profile.handle_discovery.notify_char_handle_found && 
+             s_ble_profile.handle_discovery.write_char_handle_found) {
+             ESP_LOGI(TAG, "Required characteristic handles found");
+@@ -197,6 +197,7 @@ int connect_logic_ble_connect(bool is_reconnecting) {
+     }
+     if (!handles_found) {
+         ESP_LOGW(TAG, "Characteristic handles not found within timeout");
++        ble_disconnect();
+         connect_state = BLE_INIT_COMPLETE;
+         return -1;
+     }
+@@ -206,6 +207,7 @@ int connect_logic_ble_connect(bool is_reconnecting) {
+     ret = ble_register_notify(s_ble_profile.conn_id, s_ble_profile.notify_char_handle);
+     if (ret != ESP_OK) {
+         ESP_LOGE(TAG, "Failed to register notify, error: %s", esp_err_to_name(ret));
++        ble_disconnect();
+         connect_state = BLE_INIT_COMPLETE;
+         return -1;
+     }
+@@ -214,9 +216,7 @@ int connect_logic_ble_connect(bool is_reconnecting) {
+     // 更新状态为 BLE 已连接
+     connect_state = BLE_CONNECTED;
+ 
+-    // Delay RGB light display
+     // 延迟展示氛围灯
+-    vTaskDelay(pdMS_TO_TICKS(2000));
+     ESP_LOGI(TAG, "BLE connect successfully");
+     return 0;
+ }
+@@ -356,7 +356,7 @@ wait_for_camera_command:
+     void *parse_result = NULL;
+     size_t parse_result_length = 0;
+     uint16_t received_seq = 0;
+-    esp_err_t ret = data_wait_for_result_by_cmd(0x00, 0x19, 30000, &received_seq, &parse_result, &parse_result_length);
++    esp_err_t ret = data_wait_for_result_by_cmd(0x00, 0x19, 60000, &received_seq, &parse_result, &parse_result_length);
+ 
+     if (ret != ESP_OK || parse_result == NULL) {
+         ESP_LOGE(TAG, "Timeout or error waiting for camera connection command");
+diff --git a/logic/key_logic.c b/logic/key_logic.c
+index cd28a9f..58fdd73 100644
+--- a/logic/key_logic.c
++++ b/logic/key_logic.c
+@@ -17,301 +17,544 @@
+  * failure to do so.
+  */
+ 
+-#include <time.h>
+-#include "key_logic.h"
++#include <stdbool.h>
++#include <stdint.h>
++#include <string.h>
++
++#include "freertos/FreeRTOS.h"
++#include "freertos/queue.h"
++#include "freertos/task.h"
++
+ #include "driver/gpio.h"
++#include "esp_err.h"
++#include "esp_intr_alloc.h"
+ #include "esp_log.h"
++#include "esp_sleep.h"
++#include "esp_system.h"
++#include "esp_timer.h"
+ 
++#include "ble.h"
++#include "command_logic.h"
++#include "connect_logic.h"
+ #include "data.h"
+ #include "enums_logic.h"
+-#include "connect_logic.h"
+-#include "command_logic.h"
++#include "light_logic.h"
++#include "product_config.h"
++#include "product_nvs.h"
+ #include "status_logic.h"
+-#include "dji_protocol_data_structures.h"
+-
+-static const char *TAG = "LOGIC_KEY";
+-
+-// 按键事件变量，用于存储当前按键事件
+-// Key event variable used to store current key event
+-static key_event_t current_key_event = KEY_EVENT_NONE;
+-
+-// 按键状态，标记当前按键是否被按下
+-// Key state flag indicating whether the key is currently pressed
+-static bool key_pressed = false;
+-
+-// 按键按下的起始时间，用于计算按下持续时间
+-// Start time when key is pressed, used to calculate press duration
+-static TickType_t key_press_start_time = 0;
+-
+-// 长按阈值（例如：按下超过 1 秒认为是长按）
+-// Long press threshold (e.g., press longer than 1 second is considered long press)
+-#define LONG_PRESS_THRESHOLD pdMS_TO_TICKS(1000)
+-
+-// 单击与长按事件检测时间间隔（例如：50ms）
+-// Time interval for detecting single press and long press events (e.g., 50ms)
+-#define KEY_SCAN_INTERVAL pdMS_TO_TICKS(50)
+-
+-/**
+- * @brief 处理长按事件
+- *        Handle long press event
+- * 
+- * 当按键被长时间按下时（超过长按阈值），执行相关的逻辑操作：
+- * When the key is pressed for a long time (exceeding the threshold), execute the following operations:
+- * 1. 初始化数据层。
+- * Initialize data layer.
+- * 2. 重新连接 BLE。
+- * Reconnect BLE.
+- * 3. 建立与相机的协议连接。
+- * Establish protocol connection with camera.
+- * 4. 获取设备版本信息并订阅相机状态。
+- * Get device version info and subscribe to camera status.
+- */
+-static void handle_boot_long_press() {
+-    /* 初始化数据层 */
+-    /* Initialize data layer */
+-    if (!is_data_layer_initialized()) {
+-        ESP_LOGI(TAG, "Data layer not initialized, initializing now...");
+-        data_init(); 
+-        data_register_status_update_callback(update_camera_state_handler);
+-        data_register_new_status_update_callback(update_new_camera_state_handler);
+-        if (!is_data_layer_initialized()) {
+-            ESP_LOGE(TAG, "Failed to initialize data layer");
+-            return;
++
++#include "key_logic.h"
++
++#define TAG "LOGIC_KEY"
++
++typedef enum {
++    BUTTON_EVENT_EDGE = 0,
++    BUTTON_EVENT_FINALIZE,
++} button_event_type_t;
++
++typedef struct {
++    button_event_type_t type;
++    int level;            // 0=pressed, 1=released (active-low)
++    TickType_t tick;
++} button_event_t;
++
++typedef enum {
++    ACTION_NONE = 0,
++    ACTION_RECORD_TOGGLE,
++    ACTION_MODE_NEXT,
++    ACTION_TAKE_PHOTO,
++    ACTION_PAIR_OR_RECONNECT,
++    ACTION_FACTORY_RESET_LINK,
++} action_t;
++
++static QueueHandle_t s_button_event_queue = NULL;
++static QueueHandle_t s_action_queue = NULL;
++static esp_timer_handle_t s_multiclick_timer = NULL;
++
++static portMUX_TYPE s_activity_lock = portMUX_INITIALIZER_UNLOCKED;
++static int64_t s_last_user_activity_us = 0;
++
++static void mark_user_activity(void) {
++    portENTER_CRITICAL(&s_activity_lock);
++    s_last_user_activity_us = esp_timer_get_time();
++    portEXIT_CRITICAL(&s_activity_lock);
++}
++
++static int64_t get_last_user_activity_us(void) {
++    portENTER_CRITICAL(&s_activity_lock);
++    const int64_t t = s_last_user_activity_us;
++    portEXIT_CRITICAL(&s_activity_lock);
++    return t;
++}
++
++static void post_action(action_t action) {
++    if (!s_action_queue) {
++        return;
++    }
++    (void)xQueueSend(s_action_queue, &action, 0);
++}
++
++static void multiclick_finalize_cb(void *arg) {
++    (void)arg;
++    if (!s_button_event_queue) {
++        return;
++    }
++    const button_event_t event = {
++        .type = BUTTON_EVENT_FINALIZE,
++        .level = 1,
++        .tick = xTaskGetTickCount(),
++    };
++    (void)xQueueSend(s_button_event_queue, &event, 0);
++}
++
++static void IRAM_ATTR button_isr_handler(void *arg) {
++    (void)arg;
++    if (!s_button_event_queue) {
++        return;
++    }
++    const button_event_t event = {
++        .type = BUTTON_EVENT_EDGE,
++        .level = gpio_get_level(PRODUCT_BUTTON_GPIO),
++        .tick = xTaskGetTickCountFromISR(),
++    };
++    BaseType_t high_task_woken = pdFALSE;
++    (void)xQueueSendFromISR(s_button_event_queue, &event, &high_task_woken);
++    if (high_task_woken == pdTRUE) {
++        portYIELD_FROM_ISR();
++    }
++}
++
++static void maybe_enter_light_sleep(void) {
++    const connect_state_t state = connect_logic_get_state();
++    if (state == BLE_SEARCHING || state == BLE_CONNECTED || state == PROTOCOL_CONNECTED) {
++        return;
++    }
++    if (gpio_get_level(PRODUCT_BUTTON_GPIO) == 0) {
++        return;
++    }
++
++    const int64_t now_us = esp_timer_get_time();
++    const int64_t idle_us = now_us - get_last_user_activity_us();
++    if (idle_us < ((int64_t)PRODUCT_IDLE_LIGHT_SLEEP_MS * 1000)) {
++        return;
++    }
++
++    ESP_LOGI(TAG, "Idle for %u ms -> entering light sleep", PRODUCT_IDLE_LIGHT_SLEEP_MS);
++
++    // Turn LED off before sleep (state machine will resume after wake).
++    gpio_set_level(PRODUCT_LED_GPIO, 0);
++
++    ESP_ERROR_CHECK(gpio_wakeup_enable(PRODUCT_BUTTON_GPIO, GPIO_INTR_LOW_LEVEL));
++    ESP_ERROR_CHECK(esp_sleep_enable_gpio_wakeup());
++
++    const esp_sleep_wakeup_cause_t before = esp_sleep_get_wakeup_cause();
++    (void)before;
++
++    esp_light_sleep_start();
++
++    ESP_LOGI(TAG, "Woke from light sleep, cause=%d", esp_sleep_get_wakeup_cause());
++    gpio_wakeup_disable(PRODUCT_BUTTON_GPIO);
++    mark_user_activity();
++}
++
++static void disconnect_if_connected(void) {
++    const connect_state_t state = connect_logic_get_state();
++    if (state == BLE_CONNECTED || state == PROTOCOL_CONNECTED || state == BLE_DISCONNECTING) {
++        (void)connect_logic_ble_disconnect();
++        for (int i = 0; i < 50; i++) { // ~5s
++            if (connect_logic_get_state() == BLE_INIT_COMPLETE) {
++                break;
++            }
++            vTaskDelay(pdMS_TO_TICKS(100));
++        }
++    }
++}
++
++static uint8_t choose_verify_mode(bool used_stored_camera_bda, bool force_pairing) {
++    if (force_pairing) {
++        return 1;
++    }
++    if (used_stored_camera_bda && product_nvs_get_paired()) {
++        return 0;
++    }
++    return 1;
++}
++
++static int protocol_connect_and_prepare(bool used_stored_camera_bda, bool force_pairing) {
++    const uint32_t device_id = product_nvs_get_or_create_device_id();
++
++    uint8_t bt_mac_u8[6] = {0};
++    esp_read_mac(bt_mac_u8, ESP_MAC_BT);
++    int8_t bt_mac_i8[6] = {0};
++    for (int i = 0; i < 6; i++) {
++        bt_mac_i8[i] = (int8_t)bt_mac_u8[i];
++    }
++
++    const uint8_t verify_mode = choose_verify_mode(used_stored_camera_bda, force_pairing);
++    const uint16_t verify_data = (uint16_t)(esp_random() % 10000);
++
++    ESP_LOGI(TAG, "Protocol connect: verify_mode=%u verify_data=%u device_id=0x%08X", verify_mode, verify_data, (unsigned int)device_id);
++
++    const int res = connect_logic_protocol_connect(
++        device_id,
++        6,
++        bt_mac_i8,
++        PRODUCT_FW_VERSION_U32,
++        verify_mode,
++        verify_data,
++        0
++    );
++    if (res != 0) {
++        ESP_LOGE(TAG, "Protocol connect failed");
++        light_logic_signal_error(PRODUCT_ERROR_SIGNAL_MS);
++        (void)connect_logic_ble_disconnect();
++        return -1;
++    }
++
++    version_query_response_frame_t *version_resp = command_logic_get_version();
++    if (version_resp) {
++        free(version_resp);
++    }
++
++    const int sub_res = subscript_camera_status(PUSH_MODE_PERIODIC_WITH_STATE_CHANGE, PUSH_FREQ_2HZ);
++    if (sub_res != 0) {
++        ESP_LOGW(TAG, "Failed to subscribe camera status");
++        light_logic_signal_error(PRODUCT_ERROR_SIGNAL_MS);
++    }
++
++    (void)product_nvs_set_last_camera_bda(s_ble_profile.remote_bda);
++    (void)product_nvs_set_paired(true);
++
++    ESP_LOGI(TAG, "Camera linked: %02X:%02X:%02X:%02X:%02X:%02X",
++             s_ble_profile.remote_bda[0], s_ble_profile.remote_bda[1], s_ble_profile.remote_bda[2],
++             s_ble_profile.remote_bda[3], s_ble_profile.remote_bda[4], s_ble_profile.remote_bda[5]);
++
++    return 0;
++}
++
++static int connect_ble_and_protocol(bool prefer_last_camera, bool force_pairing) {
++    if (connect_logic_get_state() == PROTOCOL_CONNECTED) {
++        return 0;
++    }
++
++    disconnect_if_connected();
++
++    esp_bd_addr_t last_bda = {0};
++    const bool have_last = product_nvs_get_last_camera_bda(last_bda);
++
++    if (prefer_last_camera && have_last) {
++        memcpy(s_ble_profile.remote_bda, last_bda, ESP_BD_ADDR_LEN);
++        ESP_LOGI(TAG, "Reconnect to last camera...");
++        if (connect_logic_ble_connect(true) == 0) {
++            if (protocol_connect_and_prepare(true, force_pairing) == 0) {
++                return 0;
++            }
+         }
++        disconnect_if_connected();
+     }
+ 
+-    /* 重新连接 BLE */
+-    /* Reconnect BLE */
+-    connect_state_t current_state = connect_logic_get_state();
++    ESP_LOGI(TAG, "Scan/connect to nearest compatible camera...");
++    if (connect_logic_ble_connect(false) != 0) {
++        ESP_LOGE(TAG, "BLE connect failed");
++        light_logic_signal_error(PRODUCT_ERROR_SIGNAL_MS);
++        return -1;
++    }
++    return protocol_connect_and_prepare(false, force_pairing);
++}
+ 
+-    if (current_state >= BLE_INIT_COMPLETE) {
+-        ESP_LOGI(TAG, "Current state is %d, disconnecting Bluetooth...", current_state);
+-        int res = connect_logic_ble_disconnect();
+-        if (res == -1) {
+-            ESP_LOGE(TAG, "Failed to disconnect Bluetooth.");
++static void action_record_toggle(void) {
++    if (connect_logic_get_state() != PROTOCOL_CONNECTED) {
++        light_logic_signal_error(PRODUCT_ERROR_SIGNAL_MS);
++        return;
++    }
++
++    if (is_camera_recording()) {
++        record_control_response_frame_t *resp = command_logic_stop_record();
++        if (resp) {
++            free(resp);
+             return;
+         }
++        light_logic_signal_error(PRODUCT_ERROR_SIGNAL_MS);
++        return;
+     }
+ 
+-    ESP_LOGI(TAG, "Attempting to connect Bluetooth...");
+-    int res = connect_logic_ble_connect(false);
+-    if (res == -1) {
+-        ESP_LOGE(TAG, "Failed to connect Bluetooth.");
++    if ((camera_mode_t)current_camera_mode == CAMERA_MODE_PHOTO) {
++        camera_mode_switch_response_frame_t *sw = command_logic_switch_camera_mode(CAMERA_MODE_NORMAL);
++        if (sw) {
++            free(sw);
++        }
++        vTaskDelay(pdMS_TO_TICKS(250));
++    }
++
++    record_control_response_frame_t *resp = command_logic_start_record();
++    if (!resp) {
++        (void)connect_logic_ble_wakeup();
++        vTaskDelay(pdMS_TO_TICKS(250));
++        resp = command_logic_start_record();
++    }
++    if (resp) {
++        free(resp);
+         return;
+-    } else {
+-        ESP_LOGI(TAG, "Successfully connected Bluetooth.");
+-    }
+-
+-    /* 相机协议连接 */
+-    /* Camera protocol connection */
+-    uint32_t g_device_id = 0x12345678;                           // 示例设备ID / Example device ID
+-    uint8_t g_mac_addr_len = 6;                                  // MAC地址长度 / MAC address length
+-    int8_t g_mac_addr[6] = {0x38, 0x34, 0x56, 0x78, 0x9A, 0xBC}; // 示例MAC地址 / Example MAC address
+-    uint32_t g_fw_version = 0x00;                                // 示例固件版本 / Example firmware version
+-    uint8_t g_verify_mode = 0;                                   // 首次配对 / First pairing
+-    uint16_t g_verify_data = 0;                                  // 随机校验码 / Random verification code
+-    uint8_t g_camera_reserved = 0;                               // 相机编号 / Camera number
+-
+-    srand((unsigned int)time(NULL));
+-    g_verify_data = (uint16_t)(rand() % 10000);
+-    res = connect_logic_protocol_connect(
+-        g_device_id,
+-        g_mac_addr_len,
+-        g_mac_addr,
+-        g_fw_version,
+-        g_verify_mode,
+-        g_verify_data,
+-        g_camera_reserved
+-    );
+-    if (res == -1) {
+-        ESP_LOGE(TAG, "Failed to connect to camera.");
++    }
++    light_logic_signal_error(PRODUCT_ERROR_SIGNAL_MS);
++}
++
++static void action_mode_next(void) {
++    if (connect_logic_get_state() != PROTOCOL_CONNECTED) {
++        light_logic_signal_error(PRODUCT_ERROR_SIGNAL_MS);
++        return;
++    }
++    key_report_response_frame_t *resp = command_logic_key_report_qs();
++    if (resp) {
++        free(resp);
+         return;
+-    } else {
+-        ESP_LOGI(TAG, "Successfully connected to camera.");
+     }
++    light_logic_signal_error(PRODUCT_ERROR_SIGNAL_MS);
++}
+ 
+-    /* 获取设备版本信息并打印 */
+-    /* Get and print device version information */
+-    version_query_response_frame_t *version_response = command_logic_get_version();
+-    if (version_response != NULL) {
+-        free(version_response);
++static void action_take_photo(void) {
++    if (connect_logic_get_state() != PROTOCOL_CONNECTED) {
++        light_logic_signal_error(PRODUCT_ERROR_SIGNAL_MS);
++        return;
+     }
+ 
+-    /* 订阅相机状态 */
+-    /* Subscribe to camera status */
+-    res = subscript_camera_status(PUSH_MODE_PERIODIC_WITH_STATE_CHANGE, PUSH_FREQ_2HZ);
+-    if (res == -1) {
+-        ESP_LOGE(TAG, "Failed to subscribe to camera status.");
++    if ((camera_mode_t)current_camera_mode != CAMERA_MODE_PHOTO) {
++        camera_mode_switch_response_frame_t *sw = command_logic_switch_camera_mode(CAMERA_MODE_PHOTO);
++        if (sw) {
++            free(sw);
++        }
++        vTaskDelay(pdMS_TO_TICKS(350));
++    }
++
++    key_report_response_frame_t *resp = command_logic_key_report_snapshot();
++    if (resp) {
++        free(resp);
++        return;
++    }
++
++    // Fallback: force photo mode then retry shutter
++    camera_mode_switch_response_frame_t *sw = command_logic_switch_camera_mode(CAMERA_MODE_PHOTO);
++    if (sw) {
++        free(sw);
++    }
++    vTaskDelay(pdMS_TO_TICKS(350));
++
++    resp = command_logic_key_report_snapshot();
++    if (resp) {
++        free(resp);
+         return;
+-    } else {
+-        ESP_LOGI(TAG, "Successfully subscribed to camera status.");
+     }
++    light_logic_signal_error(PRODUCT_ERROR_SIGNAL_MS);
+ }
+-/**
+- * @brief 处理单击事件
+- *        Handle single press event
+- * 
+- * 当按键被单击时，执行以下操作：
+- * When the key is single pressed, perform the following operations:
+- * 1. 获取当前相机模式。
+- * Get current camera mode.
+- * 2. 如果相机正在直播，则启动录制。
+- * If camera is live streaming, start recording.
+- * 3. 如果相机正在录制，则停止录制。
+- * If camera is recording, stop recording.
+- */
+-static void handle_boot_single_press() {
+-    // 获取当前相机模式
+-    // Get current camera mode
+-    camera_status_t current_status = current_camera_status;
+-    camera_mode_t current_mode = current_camera_mode;
+-
+-    // 处理不同的相机状态，这里也可以用 按键上报（0011）方式实现拍录控制
+-    // Handle different camera states, recording control can also be implemented using Key Reporting (0011) method
+-    if (current_mode == CAMERA_MODE_PHOTO || current_status == CAMERA_STATUS_LIVE_STREAMING) {
+-        // 如果当前模式是拍照、直播，开始录制
+-        // If current mode is photo or live streaming, start recording
+-        ESP_LOGI(TAG, "Camera is live streaming. Starting recording...");
+-        record_control_response_frame_t *start_record_response = command_logic_start_record();
+-        if (start_record_response != NULL) {
+-            ESP_LOGI(TAG, "Recording started successfully.");
+-            free(start_record_response);
+-        } else {
+-            ESP_LOGE(TAG, "Failed to start recording.");
+-            // 尝试唤醒
+-            // Try to wake up
+-            connect_logic_ble_wakeup();
++
++static void action_pair_or_reconnect(void) {
++    (void)connect_ble_and_protocol(true, false);
++}
++
++static void action_factory_reset_link(void) {
++    ESP_LOGW(TAG, "Factory reset link (NVS clear + force re-pair)");
++    (void)connect_logic_ble_disconnect();
++    (void)product_nvs_factory_reset();
++    memset(s_ble_profile.remote_bda, 0, ESP_BD_ADDR_LEN);
++    (void)connect_ble_and_protocol(false, true);
++}
++
++static void action_task(void *arg) {
++    (void)arg;
++
++    // Auto-reconnect on boot (only if a bonded device exists)
++    vTaskDelay(pdMS_TO_TICKS(PRODUCT_AUTOCONNECT_DELAY_MS));
++    esp_bd_addr_t last_bda = {0};
++    if (product_nvs_get_last_camera_bda(last_bda)) {
++        memcpy(s_ble_profile.remote_bda, last_bda, ESP_BD_ADDR_LEN);
++        (void)connect_ble_and_protocol(true, false);
++    }
++
++    connect_state_t last_state = connect_logic_get_state();
++    action_t action = ACTION_NONE;
++    while (1) {
++        if (xQueueReceive(s_action_queue, &action, pdMS_TO_TICKS(250)) == pdTRUE) {
++            switch (action) {
++                case ACTION_RECORD_TOGGLE:
++                    action_record_toggle();
++                    break;
++                case ACTION_MODE_NEXT:
++                    action_mode_next();
++                    break;
++                case ACTION_TAKE_PHOTO:
++                    action_take_photo();
++                    break;
++                case ACTION_PAIR_OR_RECONNECT:
++                    action_pair_or_reconnect();
++                    break;
++                case ACTION_FACTORY_RESET_LINK:
++                    action_factory_reset_link();
++                    break;
++                default:
++                    break;
++            }
+         }
+-    } else if (is_camera_recording()) {
+-        // 如果当前模式是拍照或录制中，停止录制
+-        // If current mode is photo or recording, stop recording
+-        ESP_LOGI(TAG, "Camera is recording or pre-recording. Stopping recording...");
+-        record_control_response_frame_t *stop_record_response = command_logic_stop_record();
+-        if (stop_record_response != NULL) {
+-            ESP_LOGI(TAG, "Recording stopped successfully.");
+-            free(stop_record_response);
+-        } else {
+-            ESP_LOGE(TAG, "Failed to stop recording.");
++
++        const connect_state_t state = connect_logic_get_state();
++        if (state == BLE_CONNECTED && last_state != BLE_CONNECTED) {
++            // BLE reconnected by lower layer; restore protocol link once.
++            ESP_LOGI(TAG, "BLE connected without protocol, restoring protocol link...");
++            (void)protocol_connect_and_prepare(true, false);
+         }
+-    } else {
+-        ESP_LOGI(TAG, "Camera is in an unsupported mode for recording.");
+-    }
+-
+-    /* QS 快速切换模式（可放入其他按键） */
+-    /* QS quick switch mode (can be assigned to other keys) */
+-    // key_report_response_frame_t *key_report_response = command_logic_key_report_qs();
+-    // if (key_report_response != NULL) {
+-    //     free(key_report_response);
+-    // }
+-
+-    /* Switch camera to Hyperlapse mode */
+-    /* 切换相机至运动延时模式 */
+-    // camera_mode_switch_response_frame_t *switch_response = command_logic_switch_camera_mode(CAMERA_MODE_HYPERLAPSE);
+-    // if (switch_response != NULL) {
+-    //     free(switch_response);
+-    // }
+-
+-    /* 发送原始字节测试 */
+-    /* Send raw bytes test */
+-    // command_logic_send_raw_bytes("AA1600010000000000128C23001103010000263B43CC", 5000);
+-
+-    /* 休眠状态下快照键上报测试 */
+-    /* Snapshot key report test */
+-    // connect_logic_ble_wakeup();
+-    // key_report_response_frame_t *snapshot_response = command_logic_key_report_snapshot();
+-    // if (snapshot_response != NULL) {
+-    //     free(snapshot_response);
+-    // }
++        last_state = connect_logic_get_state();
++        maybe_enter_light_sleep();
++    }
+ }
+ 
+-/**
+- * @brief 按键扫描任务
+- *        Key scan task
+- * 
+- * 定期检查按键状态，检测单击和长按事件，并触发相应的操作：
+- * Periodically check key status, detect single press and long press events, and trigger corresponding operations:
+- * - 长按：进行蓝牙断开、重连、相机协议连接等操作。
+- * - Long press: perform Bluetooth disconnect, reconnect, camera protocol connection, etc.
+- * - 单击：根据当前相机模式启动或停止录制。
+- * - Single press: start or stop recording based on current camera mode, and switch camera mode.
+- */
+-static void key_scan_task(void *arg) {
++static void button_task(void *arg) {
++    (void)arg;
++
++    bool pressed = (gpio_get_level(PRODUCT_BUTTON_GPIO) == 0);
++    TickType_t press_tick = 0;
++    TickType_t last_edge_tick = 0;
++    uint8_t click_count = 0;
++
++    button_event_t event;
+     while (1) {
+-        // 获取按键状态
+-        // Get key state
+-        bool new_key_state = gpio_get_level(BOOT_KEY_GPIO);
+-
+-        if (new_key_state == 0 && !key_pressed) { // 按键按下 / Key pressed
+-            key_pressed = true;
+-            key_press_start_time = xTaskGetTickCount();
+-            current_key_event = KEY_EVENT_NONE;
+-            // ESP_LOGI(TAG, "BOOT key pressed.");
+-        } else if (new_key_state == 0 && key_pressed) { // 按键保持按下状态 / Key remains pressed
+-            TickType_t press_duration = xTaskGetTickCount() - key_press_start_time;
+-
+-            if (press_duration >= LONG_PRESS_THRESHOLD && current_key_event != KEY_EVENT_LONG_PRESS) {
+-                // 长按事件（持续按下达到阈值时立即触发）
+-                // Long press event (triggered immediately when threshold is reached)
+-                current_key_event = KEY_EVENT_LONG_PRESS;
+-                // 处理长按事件：首先断开当前蓝牙连接，然后尝试重新连接
+-                // Handle long press event: first disconnect current Bluetooth connection, then try to reconnect
+-                handle_boot_long_press();
+-                // ESP_LOGI(TAG, "Long press detected. Duration: %lu ticks", press_duration);
++        if (xQueueReceive(s_button_event_queue, &event, portMAX_DELAY) != pdTRUE) {
++            continue;
++        }
++
++        if (event.type == BUTTON_EVENT_EDGE) {
++            const TickType_t debounce_ticks = pdMS_TO_TICKS(PRODUCT_DEBOUNCE_MS);
++            if ((event.tick - last_edge_tick) < debounce_ticks) {
++                continue;
+             }
+-        } else if (new_key_state == 1 && key_pressed) { // 按键松开 / Key released
+-            key_pressed = false;
+-            TickType_t press_duration = xTaskGetTickCount() - key_press_start_time;
+-
+-            if (press_duration < LONG_PRESS_THRESHOLD) {
+-                // 单击事件 / Single press event
+-                current_key_event = KEY_EVENT_SINGLE;
+-                ESP_LOGI(TAG, "Single press detected. Duration: %lu ticks", press_duration);
+-                // 处理单击事件：拍录控制 / Handle single press event: recording control
+-                handle_boot_single_press();
++            last_edge_tick = event.tick;
++            mark_user_activity();
++
++            if (event.level == 0 && !pressed) {
++                pressed = true;
++                press_tick = event.tick;
++                (void)esp_timer_stop(s_multiclick_timer);
++                continue;
+             }
+ 
+-            // 可以不做额外操作，因为长按的触发已经在按下过程中处理了
+-            // No additional operation needed as long press is handled during the press
++            if (event.level == 1 && pressed) {
++                pressed = false;
++                const TickType_t duration_ticks = event.tick - press_tick;
++                const uint32_t duration_ms = (uint32_t)(duration_ticks * portTICK_PERIOD_MS);
++
++                if (duration_ms >= PRODUCT_VERY_LONG_PRESS_MS) {
++                    click_count = 0;
++                    (void)esp_timer_stop(s_multiclick_timer);
++                    post_action(ACTION_FACTORY_RESET_LINK);
++                    continue;
++                }
++
++                if (duration_ms >= PRODUCT_LONG_PRESS_MS) {
++                    click_count = 0;
++                    (void)esp_timer_stop(s_multiclick_timer);
++                    post_action(ACTION_PAIR_OR_RECONNECT);
++                    continue;
++                }
++
++                if (duration_ms < PRODUCT_MIN_VALID_PRESS_MS) {
++                    continue;
++                }
++
++                if (click_count < 3) {
++                    click_count++;
++                }
++
++                (void)esp_timer_stop(s_multiclick_timer);
++                (void)esp_timer_start_once(s_multiclick_timer, PRODUCT_MULTICLICK_FINALIZE_WINDOW_US);
++                continue;
++            }
++
++            continue;
+         }
+ 
+-        vTaskDelay(KEY_SCAN_INTERVAL);  // 每隔一段时间扫描一次按键状态 / Scan key state periodically
++        if (event.type == BUTTON_EVENT_FINALIZE) {
++            const uint8_t final_clicks = click_count;
++            click_count = 0;
++
++            if (pressed) {
++                continue;
++            }
++
++            switch (final_clicks) {
++                case 1:
++                    post_action(ACTION_RECORD_TOGGLE);
++                    break;
++                case 2:
++                    post_action(ACTION_MODE_NEXT);
++                    break;
++                case 3:
++                    post_action(ACTION_TAKE_PHOTO);
++                    break;
++                default:
++                    break;
++            }
++            continue;
++        }
+     }
+ }
+ 
+-/**
+- * @brief 初始化按键逻辑
+- *        Initialize key logic
+- * 
+- * 配置按键的 GPIO 引脚，并启动按键扫描任务。
+- * Configure GPIO pin for key and start key scan task.
+- */
+ void key_logic_init(void) {
+-    // 配置引脚为输入
+-    // Configure pin as input
+-    gpio_config_t io_conf = {
+-        .pin_bit_mask = (1ULL << BOOT_KEY_GPIO),
++    mark_user_activity();
++
++    ESP_ERROR_CHECK(product_nvs_init());
++    esp_bd_addr_t last_bda = {0};
++    if (product_nvs_get_last_camera_bda(last_bda)) {
++        memcpy(s_ble_profile.remote_bda, last_bda, ESP_BD_ADDR_LEN);
++    }
++
++    if (!is_data_layer_initialized()) {
++        data_init();
++        data_register_status_update_callback(update_camera_state_handler);
++        data_register_new_status_update_callback(update_new_camera_state_handler);
++    }
++
++    // Configure button GPIO as input with internal pull-up (active-low button)
++    const gpio_config_t io_conf = {
++        .pin_bit_mask = (1ULL << PRODUCT_BUTTON_GPIO),
+         .mode = GPIO_MODE_INPUT,
+-        .pull_up_en = GPIO_PULLUP_DISABLE,
+-        .pull_down_en = GPIO_PULLDOWN_ENABLE,
++        .pull_up_en = GPIO_PULLUP_ENABLE,
++        .pull_down_en = GPIO_PULLDOWN_DISABLE,
++        .intr_type = GPIO_INTR_ANYEDGE,
+     };
+-    gpio_config(&io_conf);
++    ESP_ERROR_CHECK(gpio_config(&io_conf));
+ 
+-    // 启动按键扫描任务
+-    // Start key scan task
+-    xTaskCreate(key_scan_task, "key_scan_task", 2048, NULL, 2, NULL);
+-}
++    // Queues
++    s_button_event_queue = xQueueCreate(16, sizeof(button_event_t));
++    s_action_queue = xQueueCreate(8, sizeof(action_t));
++    if (!s_button_event_queue || !s_action_queue) {
++        ESP_LOGE(TAG, "Failed to create queues");
++        return;
++    }
+ 
+-/**
+- * @brief 获取当前按键事件
+- *        Get current key event
+- * 
+- * 获取并重置当前的按键事件，主要用于外部任务获取事件后进行处理。
+- * Get and reset current key event, mainly used for external tasks to process after getting the event.
+- * 
+- * @return key_event_t 当前按键事件类型 / Current key event type
+- */
+-key_event_t key_logic_get_event(void) {
+-    key_event_t event = current_key_event;
+-    current_key_event = KEY_EVENT_NONE; // 获取后重置事件 / Reset event after getting it
+-    return event;
++    // esp_timer one-shot for multiclick finalization
++    const esp_timer_create_args_t timer_args = {
++        .callback = &multiclick_finalize_cb,
++        .arg = NULL,
++        .dispatch_method = ESP_TIMER_TASK,
++        .name = "multiclick_finalize",
++        .skip_unhandled_events = true,
++    };
++    ESP_ERROR_CHECK(esp_timer_create(&timer_args, &s_multiclick_timer));
++
++    // ISR service (ignore already-installed case)
++    esp_err_t isr_ret = gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
++    if (isr_ret != ESP_OK && isr_ret != ESP_ERR_INVALID_STATE) {
++        ESP_ERROR_CHECK(isr_ret);
++    }
++    ESP_ERROR_CHECK(gpio_isr_handler_add(PRODUCT_BUTTON_GPIO, button_isr_handler, NULL));
++
++    // Tasks
++    if (xTaskCreate(button_task, "button_task", 2048, NULL, 3, NULL) != pdPASS) {
++        ESP_LOGE(TAG, "Failed to create button_task");
++        return;
++    }
++    if (xTaskCreate(action_task, "action_task", 6144, NULL, 2, NULL) != pdPASS) {
++        ESP_LOGE(TAG, "Failed to create action_task");
++        return;
++    }
++
++    ESP_LOGI(TAG, "Single-button UI on GPIO%d (active-low, pull-up)", (int)PRODUCT_BUTTON_GPIO);
+ }
+diff --git a/logic/key_logic.h b/logic/key_logic.h
+index 22dc37a..4e25e75 100644
+--- a/logic/key_logic.h
++++ b/logic/key_logic.h
+@@ -20,28 +20,7 @@
+ #ifndef KEY_LOGIC_H
+ #define KEY_LOGIC_H
+ 
+-#include "freertos/FreeRTOS.h"
+-#include "freertos/task.h"
+-#include "driver/gpio.h"
+-
+-#define BOOT_KEY_GPIO   GPIO_NUM_9  // 假设 BOOT 按键连接到 GPIO 9
+-                                    // Assume BOOT button is connected to GPIO 9
+-
+-// 按键事件
+-// Key Events
+-typedef enum {
+-    KEY_EVENT_NONE = 0,   // 无事件
+-                          // No event
+-    KEY_EVENT_SINGLE,     // 单击事件
+-                          // Single click event
+-    KEY_EVENT_LONG_PRESS, // 长按事件
+-                          // Long press event
+-    KEY_EVENT_ERROR       // 错误事件
+-                          // Error event
+-} key_event_t;
+-
+ void key_logic_init(void);
+ 
+-key_event_t key_logic_get_event(void);
++#endif
+ 
+-#endif
+\ No newline at end of file
+diff --git a/logic/light_logic.c b/logic/light_logic.c
+index 75e0f58..e2c94c1 100644
+--- a/logic/light_logic.c
++++ b/logic/light_logic.c
+@@ -17,211 +17,177 @@
+  * failure to do so.
+  */
+ 
++#include <stdbool.h>
++
+ #include "freertos/FreeRTOS.h"
+ #include "freertos/task.h"
++#include "driver/gpio.h"
++#include "esp_err.h"
+ #include "esp_log.h"
+-#include "led_strip.h"
+-#include "sdkconfig.h"
++#include "esp_timer.h"
+ 
+ #include "connect_logic.h"
+ #include "status_logic.h"
+-#include "gps_logic.h"
++
++#include "light_logic.h"
++#include "product_config.h"
+ 
+ #define TAG "LOGIC_LIGHT"
+-#define LED_GPIO 8                // 使用 GPIO 来控制 RGB LED
+-                                  // Use GPIO to control RGB LED
+-#define LED_STRIP_LENGTH 1        // 设定 LED 数量为1
+-                                  // Set the number of LEDs to 1
+-
+-// 创建一个 led_strip 句柄
+-// Create a led_strip handle
+-static led_strip_handle_t led_strip = NULL;
+-
+-// 初始化 RGB LED 相关配置和设置
+-// Initialize RGB LED related configurations and settings
+-static void init_rgb_led(void) {
+-    // 配置 LED
+-    // Configure LED
+-    led_strip_config_t strip_config = {
+-        .strip_gpio_num = LED_GPIO,
+-        .max_leds = LED_STRIP_LENGTH // 设置 LED 数量为 1
+-                                     // Set the number of LEDs to 1
+-    };
+ 
+-    // 配置 RMT
+-    // Configure RMT
+-    led_strip_rmt_config_t rmt_config = {
+-        .resolution_hz = 10 * 1000 * 1000, // 设置 RMT 分辨率为 10 MHz
+-                                           // Set RMT resolution to 10 MHz
+-        .flags.with_dma = false,           // 禁用 DMA
+-                                           // Disable DMA
+-    };
++// Single status LED (active-high)
++#define STATUS_LED_GPIO PRODUCT_LED_GPIO
+ 
+-    // 使用 &led_strip 作为第三个参数，因为它需要一个指向 led_strip_handle_t 的指针
+-    // Use &led_strip as the third parameter because it needs a pointer to led_strip_handle_t
+-    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
++// Patterns (ms)
++#define LED_BOOT_ON_MS 800
++#define LED_BOOT_OFF_MS 200
+ 
+-    led_strip_clear(led_strip); // 清除所有 LED，将其关闭
+-                                // Clear all LEDs and turn them off
+-    ESP_LOGI(TAG, "RGB LED initialized");
+-}
++#define LED_READY_ON_MS 120
++#define LED_READY_OFF_MS 880
++
++#define LED_CONNECTING_ON_MS 80
++#define LED_CONNECTING_OFF_MS 120
++
++#define LED_RECORDING_ON_MS 180
++#define LED_RECORDING_OFF_MS 820
+ 
+-// 设置 RGB LED 的颜色
+-// Set RGB LED color
+-static void set_rgb_color(uint8_t red, uint8_t green, uint8_t blue) {
+-    led_strip_set_pixel(led_strip, 0, red, green, blue);  // 设置LED的颜色
+-                                                          // Set LED color
+-    led_strip_refresh(led_strip); // 刷新 LED Strip 以更新颜色
+-                                  // Refresh LED Strip to update color
++#define LED_ERROR_ON_MS 70
++#define LED_ERROR_OFF_MS 70
++#define LED_ERROR_PAUSE_MS 700
++
++typedef enum {
++    LED_MODE_READY = 0,
++    LED_MODE_CONNECTING,
++    LED_MODE_CONNECTED,
++    LED_MODE_RECORDING,
++    LED_MODE_ERROR,
++} led_mode_t;
++
++static TaskHandle_t s_led_task_handle = NULL;
++static int64_t s_error_until_us = 0;
++
++static void status_led_set(bool on) {
++    gpio_set_level(STATUS_LED_GPIO, on ? 1 : 0);
+ }
+ 
+-// 初始化 RGB LED 状态所需的变量
+-// Initialize variables needed for RGB LED status
+-uint8_t led_red = 0, led_green = 0, led_blue = 0;   // RGB 值
+-                                                    // RGB values
+-bool led_blinking = false;                          // 是否闪烁
+-                                                    // Whether to blink
+-bool current_led_on = false;                        // LED 当前状态（开或关）
+-                                                    // Current LED status (on or off)
+-
+-// 更新 LED 状态的函数
+-// Function to update LED state
+-static void update_led_state() {
+-    connect_state_t current_connect_state = connect_logic_get_state();
+-    bool current_camera_recording = is_camera_recording();
+-    bool current_gps_connected = is_gps_found();
+-
+-    // 打印当前状态
+-    // Print current status
+-    // ESP_LOGI(TAG, "Current connect state: %d, Camera recording: %d, GPS connected: %d", current_connect_state, current_camera_recording, current_gps_connected);
+-
+-    led_blinking = false;  // 默认 LED 不闪烁
+-                           // LED does not blink by default
+-
+-    switch (current_connect_state) {
+-        case BLE_NOT_INIT:
+-            led_red = 13;      // 255 * 0.05
+-            led_green = 0;
+-            led_blue = 0;      // 红色表示蓝牙未初始化
+-                               // Red indicates Bluetooth not initialized
+-            break;
+-
+-        case BLE_INIT_COMPLETE:
+-            led_red = 13;      // 255 * 0.05
+-            led_green = 13;    // 255 * 0.05
+-            led_blue = 0;      // 黄色表示蓝牙初始化完成
+-                               // Yellow indicates Bluetooth initialization complete
+-            break;
+-
+-        case BLE_SEARCHING:
+-            led_blinking = true;
+-            led_red = 0;
+-            led_green = 0;
+-            led_blue = 13;     // 255 * 0.05，蓝色闪烁表示蓝牙正在搜索
+-                               // Blue blinking indicates Bluetooth is searching
+-            break;
+-
+-        case BLE_CONNECTED:
+-            led_red = 0;
+-            led_green = 0;
+-            led_blue = 13;     // 255 * 0.05，蓝色表示蓝牙已连接
+-                               // Blue indicates Bluetooth is connected
+-            break;
+-
+-        case PROTOCOL_CONNECTED:
+-            if (current_camera_recording) {
+-                if (current_gps_connected) {
+-                    led_blinking = true;
+-                    led_red = 6;       // 128 * 0.05
+-                    led_green = 0;
+-                    led_blue = 6;      // 紫色闪烁表示正在录制且 GPS 已连接
+-                                       // Purple blinking indicates recording and GPS connected
+-                } else {
+-                    led_blinking = true;
+-                    led_red = 0;
+-                    led_green = 13;    // 255 * 0.05
+-                    led_blue = 0;      // 绿色闪烁表示正在录制但 GPS 未连接
+-                                       // Green blinking indicates recording but GPS not connected
+-                }
+-            } else {
+-                if (current_gps_connected) {
+-                    led_red = 6;       // 128 * 0.05
+-                    led_green = 0;
+-                    led_blue = 6;      // 紫色表示未录制但 GPS 已连接
+-                                       // Purple indicates not recording but GPS connected
+-                } else {
+-                    led_red = 0;
+-                    led_green = 13;    // 255 * 0.05
+-                    led_blue = 0;      // 绿色表示未录制且 GPS 未连接
+-                                       // Green indicates not recording and GPS not connected
+-                }
+-            }
+-            break;
+-            
+-        default:
+-            led_red = 0;
+-            led_green = 0;
+-            led_blue = 0;  // 关闭 LED
+-                           // Turn off LED
+-            break;
++static led_mode_t compute_led_mode(void) {
++    const int64_t now_us = esp_timer_get_time();
++    if (now_us < s_error_until_us) {
++        return LED_MODE_ERROR;
++    }
++
++    const connect_state_t state = connect_logic_get_state();
++    if (state == PROTOCOL_CONNECTED) {
++        return is_camera_recording() ? LED_MODE_RECORDING : LED_MODE_CONNECTED;
+     }
++
++    if (state == BLE_SEARCHING || state == BLE_CONNECTED) {
++        return LED_MODE_CONNECTING;
++    }
++
++    return LED_MODE_READY;
+ }
+ 
+-// 定时器回调函数，用于定期更新 LED 状态
+-// Timer callback function for periodic LED state updates
+-static void led_state_timer_callback(TimerHandle_t xTimer) {
+-    update_led_state();
++static bool delay_with_mode_check(uint32_t delay_ms, led_mode_t expected_mode) {
++    const TickType_t deadline = xTaskGetTickCount() + pdMS_TO_TICKS(delay_ms);
++    while (xTaskGetTickCount() < deadline) {
++        if (compute_led_mode() != expected_mode) {
++            return false;
++        }
++        const TickType_t remaining = deadline - xTaskGetTickCount();
++        vTaskDelay(remaining > pdMS_TO_TICKS(50) ? pdMS_TO_TICKS(50) : remaining);
++    }
++    return true;
+ }
+ 
+-// 定时器回调函数，用于实现 LED 闪烁效果
+-// Timer callback function for LED blinking effect
+-static void led_blink_timer_callback(TimerHandle_t xTimer) {
+-    if (led_blinking) {
+-        // 如果在闪烁状态，且当前 LED 开启，关闭 LED
+-        // If in blinking state and LED is currently on, turn it off
+-        if (current_led_on) {
+-            set_rgb_color(0, 0, 0);  // 关闭 LED
+-                                     // Turn off LED
+-        } else {
+-            // 如果当前 LED 关闭，设置为 RGB 颜色
+-            // If LED is currently off, set it to RGB color
+-            set_rgb_color(led_red, led_green, led_blue);
++static void led_task(void *arg) {
++    (void)arg;
++
++    // BOOT: 800ms ON then 200ms OFF once
++    status_led_set(true);
++    vTaskDelay(pdMS_TO_TICKS(LED_BOOT_ON_MS));
++    status_led_set(false);
++    vTaskDelay(pdMS_TO_TICKS(LED_BOOT_OFF_MS));
++
++    while (1) {
++        const led_mode_t mode = compute_led_mode();
++
++        switch (mode) {
++            case LED_MODE_READY:
++                status_led_set(true);
++                if (!delay_with_mode_check(LED_READY_ON_MS, mode)) break;
++                status_led_set(false);
++                delay_with_mode_check(LED_READY_OFF_MS, mode);
++                break;
++
++            case LED_MODE_CONNECTING:
++                status_led_set(true);
++                if (!delay_with_mode_check(LED_CONNECTING_ON_MS, mode)) break;
++                status_led_set(false);
++                delay_with_mode_check(LED_CONNECTING_OFF_MS, mode);
++                break;
++
++            case LED_MODE_CONNECTED:
++                status_led_set(true);
++                delay_with_mode_check(200, mode);
++                break;
++
++            case LED_MODE_RECORDING:
++                status_led_set(true);
++                if (!delay_with_mode_check(LED_RECORDING_ON_MS, mode)) break;
++                status_led_set(false);
++                delay_with_mode_check(LED_RECORDING_OFF_MS, mode);
++                break;
++
++            case LED_MODE_ERROR:
++                for (int i = 0; i < 3; i++) {
++                    status_led_set(true);
++                    if (!delay_with_mode_check(LED_ERROR_ON_MS, mode)) break;
++                    status_led_set(false);
++                    if (!delay_with_mode_check(LED_ERROR_OFF_MS, mode)) break;
++                }
++                status_led_set(false);
++                delay_with_mode_check(LED_ERROR_PAUSE_MS, mode);
++                break;
++
++            default:
++                status_led_set(false);
++                vTaskDelay(pdMS_TO_TICKS(100));
++                break;
+         }
+-        current_led_on = !current_led_on;
+-    } else {
+-        // 如果不在闪烁状态，直接设置为 RGB 颜色
+-        // If not in blinking state, directly set to RGB color
+-        set_rgb_color(led_red, led_green, led_blue);
+     }
+ }
+ 
+-// 初始化灯光逻辑，包括 LED 的状态更新和闪烁定时器
+-// Initialize light logic, including LED state updates and blink timer
+-int init_light_logic() {
+-    init_rgb_led();
+-    
+-    // 创建一个定时器，每 500ms 执行一次 update_led_state
+-    // Create a timer that executes update_led_state every 500ms
+-    TimerHandle_t led_state_timer = xTimerCreate("led_state_timer", pdMS_TO_TICKS(500), pdTRUE, (void *)0, led_state_timer_callback);
+-
+-    if (led_state_timer != NULL) {
+-        xTimerStart(led_state_timer, 0);
+-        ESP_LOGI(TAG, "LED state timer started successfully");
+-    } else {
+-        ESP_LOGE(TAG, "Failed to create LED state timer");
+-        return -1;
++void light_logic_signal_error(uint32_t duration_ms) {
++    const int64_t now_us = esp_timer_get_time();
++    const int64_t until_us = now_us + ((int64_t)duration_ms * 1000);
++    if (until_us > s_error_until_us) {
++        s_error_until_us = until_us;
+     }
++    if (s_led_task_handle) {
++        xTaskNotifyGive(s_led_task_handle);
++    }
++}
+ 
+-    // 创建另一个定时器，用来控制 LED 闪烁的状态（开关）
+-    // Create another timer to control LED blinking state (on/off)
+-    TimerHandle_t led_blink_timer = xTimerCreate("led_blink_timer", pdMS_TO_TICKS(500), pdTRUE, (void *)0, led_blink_timer_callback);
++int init_light_logic(void) {
++    gpio_config_t io_conf = {
++        .pin_bit_mask = (1ULL << STATUS_LED_GPIO),
++        .mode = GPIO_MODE_OUTPUT,
++        .pull_up_en = GPIO_PULLUP_DISABLE,
++        .pull_down_en = GPIO_PULLDOWN_DISABLE,
++        .intr_type = GPIO_INTR_DISABLE,
++    };
++    const esp_err_t ret = gpio_config(&io_conf);
++    if (ret != ESP_OK) {
++        ESP_LOGE(TAG, "GPIO config failed: %s", esp_err_to_name(ret));
++        return -1;
++    }
++    status_led_set(false);
+ 
+-    if (led_blink_timer != NULL) {
+-        xTimerStart(led_blink_timer, 0);
+-        ESP_LOGI(TAG, "LED blink timer started successfully");
+-        return 0;
+-    } else {
+-        ESP_LOGE(TAG, "Failed to create LED blink timer");
++    if (xTaskCreate(led_task, "status_led", 2048, NULL, 2, &s_led_task_handle) != pdPASS) {
++        ESP_LOGE(TAG, "Failed to create LED task");
+         return -1;
+     }
++
++    ESP_LOGI(TAG, "Single status LED initialized on GPIO%d", (int)STATUS_LED_GPIO);
++    return 0;
+ }
+diff --git a/logic/light_logic.h b/logic/light_logic.h
+index f67873d..2e4e4e5 100644
+--- a/logic/light_logic.h
++++ b/logic/light_logic.h
+@@ -20,6 +20,10 @@
+ #ifndef LIGHT_LOGIC_H
+ #define LIGHT_LOGIC_H
+ 
++#include <stdint.h>
++
+ int init_light_logic(void);
+ 
+-#endif
+\ No newline at end of file
++void light_logic_signal_error(uint32_t duration_ms);
++
++#endif
+diff --git a/logic/product_config.h b/logic/product_config.h
+new file mode 100644
+index 0000000..201df04
+--- /dev/null
++++ b/logic/product_config.h
+@@ -0,0 +1,40 @@
++/* SPDX-License-Identifier: MIT */
++/*
++ * Copyright (C) 2025 SZ DJI Technology Co., Ltd.
++ *
++ * Product configuration for ESP32 DevKit (ESP-WROOM-32) single-button BLE remote.
++ */
++
++#ifndef PRODUCT_CONFIG_H
++#define PRODUCT_CONFIG_H
++
++#include "driver/gpio.h"
++
++// Semantic version (single source of truth)
++#define PRODUCT_VERSION "3.1.0"
++
++// Encoded firmware version for protocol fields (major.minor.patch -> 0xMMmmpp00)
++#define PRODUCT_FW_VERSION_U32 ((3U << 24) | (1U << 16) | (0U << 8))
++
++// Hardware (fixed pinout)
++#define PRODUCT_BUTTON_GPIO GPIO_NUM_27
++#define PRODUCT_LED_GPIO GPIO_NUM_33
++
++// UX timing
++#define PRODUCT_DEBOUNCE_MS 30
++#define PRODUCT_MULTICLICK_FINALIZE_WINDOW_US 380000
++#define PRODUCT_LONG_PRESS_MS 2000
++#define PRODUCT_VERY_LONG_PRESS_MS 7000
++#define PRODUCT_MIN_VALID_PRESS_MS 30
++
++// Power
++#define PRODUCT_IDLE_LIGHT_SLEEP_MS (5U * 60U * 1000U)
++
++// Feedback
++#define PRODUCT_ERROR_SIGNAL_MS 2200U
++
++// Connection tuning
++#define PRODUCT_AUTOCONNECT_DELAY_MS 300U
++
++#endif
++
+diff --git a/logic/product_nvs.c b/logic/product_nvs.c
+new file mode 100644
+index 0000000..6370d60
+--- /dev/null
++++ b/logic/product_nvs.c
+@@ -0,0 +1,167 @@
++/* SPDX-License-Identifier: MIT */
++/*
++ * Product NVS storage (bonded camera address + pairing state).
++ */
++
++#include <string.h>
++
++#include "nvs.h"
++#include "nvs_flash.h"
++#include "esp_log.h"
++#include "esp_system.h"
++
++#include "product_nvs.h"
++
++#define TAG "PRODUCT_NVS"
++
++static const char *NVS_NS = "onebtn";
++static const char *KEY_CAM_BDA = "cam_bda";
++static const char *KEY_PAIRED = "paired";
++static const char *KEY_DEVICE_ID = "dev_id";
++
++static bool bda_is_zero(const esp_bd_addr_t bda) {
++    static const uint8_t zero[ESP_BD_ADDR_LEN] = {0};
++    return memcmp(bda, zero, ESP_BD_ADDR_LEN) == 0;
++}
++
++esp_err_t product_nvs_init(void) {
++    esp_err_t ret = nvs_flash_init();
++    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
++        ESP_LOGW(TAG, "NVS init returned %s, erasing NVS...", esp_err_to_name(ret));
++        ESP_ERROR_CHECK(nvs_flash_erase());
++        ret = nvs_flash_init();
++    }
++    return ret;
++}
++
++bool product_nvs_get_last_camera_bda(esp_bd_addr_t out_bda) {
++    if (!out_bda) {
++        return false;
++    }
++
++    nvs_handle_t handle;
++    esp_err_t ret = nvs_open(NVS_NS, NVS_READONLY, &handle);
++    if (ret != ESP_OK) {
++        return false;
++    }
++
++    size_t len = ESP_BD_ADDR_LEN;
++    ret = nvs_get_blob(handle, KEY_CAM_BDA, out_bda, &len);
++    nvs_close(handle);
++
++    if (ret != ESP_OK || len != ESP_BD_ADDR_LEN || bda_is_zero(out_bda)) {
++        memset(out_bda, 0, ESP_BD_ADDR_LEN);
++        return false;
++    }
++    return true;
++}
++
++esp_err_t product_nvs_set_last_camera_bda(const esp_bd_addr_t bda) {
++    if (!bda || bda_is_zero(bda)) {
++        return ESP_ERR_INVALID_ARG;
++    }
++
++    nvs_handle_t handle;
++    esp_err_t ret = nvs_open(NVS_NS, NVS_READWRITE, &handle);
++    if (ret != ESP_OK) {
++        return ret;
++    }
++
++    ret = nvs_set_blob(handle, KEY_CAM_BDA, bda, ESP_BD_ADDR_LEN);
++    if (ret == ESP_OK) {
++        ret = nvs_commit(handle);
++    }
++    nvs_close(handle);
++    return ret;
++}
++
++esp_err_t product_nvs_clear_last_camera_bda(void) {
++    nvs_handle_t handle;
++    esp_err_t ret = nvs_open(NVS_NS, NVS_READWRITE, &handle);
++    if (ret != ESP_OK) {
++        return ret;
++    }
++    (void)nvs_erase_key(handle, KEY_CAM_BDA);
++    ret = nvs_commit(handle);
++    nvs_close(handle);
++    return ret;
++}
++
++bool product_nvs_get_paired(void) {
++    nvs_handle_t handle;
++    esp_err_t ret = nvs_open(NVS_NS, NVS_READONLY, &handle);
++    if (ret != ESP_OK) {
++        return false;
++    }
++    uint8_t paired = 0;
++    ret = nvs_get_u8(handle, KEY_PAIRED, &paired);
++    nvs_close(handle);
++    return (ret == ESP_OK) && (paired != 0);
++}
++
++esp_err_t product_nvs_set_paired(bool paired) {
++    nvs_handle_t handle;
++    esp_err_t ret = nvs_open(NVS_NS, NVS_READWRITE, &handle);
++    if (ret != ESP_OK) {
++        return ret;
++    }
++    ret = nvs_set_u8(handle, KEY_PAIRED, paired ? 1 : 0);
++    if (ret == ESP_OK) {
++        ret = nvs_commit(handle);
++    }
++    nvs_close(handle);
++    return ret;
++}
++
++static uint32_t derive_device_id_from_bt_mac(void) {
++    uint8_t bt_mac[6] = {0};
++    esp_read_mac(bt_mac, ESP_MAC_BT);
++
++    uint32_t id = ((uint32_t)bt_mac[2] << 24) |
++                  ((uint32_t)bt_mac[3] << 16) |
++                  ((uint32_t)bt_mac[4] << 8) |
++                  ((uint32_t)bt_mac[5]);
++    id ^= 0xA5A50000U;
++    if (id == 0) {
++        id = 0xA5A50001U;
++    }
++    return id;
++}
++
++uint32_t product_nvs_get_or_create_device_id(void) {
++    nvs_handle_t handle;
++    esp_err_t ret = nvs_open(NVS_NS, NVS_READWRITE, &handle);
++    if (ret != ESP_OK) {
++        return derive_device_id_from_bt_mac();
++    }
++
++    uint32_t device_id = 0;
++    ret = nvs_get_u32(handle, KEY_DEVICE_ID, &device_id);
++    if (ret == ESP_OK && device_id != 0) {
++        nvs_close(handle);
++        return device_id;
++    }
++
++    device_id = derive_device_id_from_bt_mac();
++    (void)nvs_set_u32(handle, KEY_DEVICE_ID, device_id);
++    (void)nvs_commit(handle);
++    nvs_close(handle);
++    return device_id;
++}
++
++esp_err_t product_nvs_factory_reset(void) {
++    nvs_handle_t handle;
++    esp_err_t ret = nvs_open(NVS_NS, NVS_READWRITE, &handle);
++    if (ret != ESP_OK) {
++        return ret;
++    }
++
++    (void)nvs_erase_key(handle, KEY_CAM_BDA);
++    (void)nvs_erase_key(handle, KEY_PAIRED);
++    (void)nvs_erase_key(handle, KEY_DEVICE_ID);
++
++    ret = nvs_commit(handle);
++    nvs_close(handle);
++    return ret;
++}
++
+diff --git a/logic/product_nvs.h b/logic/product_nvs.h
+new file mode 100644
+index 0000000..49e4374
+--- /dev/null
++++ b/logic/product_nvs.h
+@@ -0,0 +1,28 @@
++/* SPDX-License-Identifier: MIT */
++/*
++ * Product NVS storage (bonded camera address + pairing state).
++ */
++
++#ifndef PRODUCT_NVS_H
++#define PRODUCT_NVS_H
++
++#include <stdbool.h>
++#include <stdint.h>
++
++#include "esp_err.h"
++#include "esp_bt_defs.h"
++
++esp_err_t product_nvs_init(void);
++
++bool product_nvs_get_last_camera_bda(esp_bd_addr_t out_bda);
++esp_err_t product_nvs_set_last_camera_bda(const esp_bd_addr_t bda);
++esp_err_t product_nvs_clear_last_camera_bda(void);
++
++bool product_nvs_get_paired(void);
++esp_err_t product_nvs_set_paired(bool paired);
++
++uint32_t product_nvs_get_or_create_device_id(void);
++esp_err_t product_nvs_factory_reset(void);
++
++#endif
++
+diff --git a/main/CMakeLists.txt b/main/CMakeLists.txt
+index 85d9e51..454b836 100644
+--- a/main/CMakeLists.txt
++++ b/main/CMakeLists.txt
+@@ -1,19 +1,36 @@
+-idf_component_register(SRCS "app_main.c" 
+-                            "../utils/crc/custom_crc16.c" 
+-                            "../utils/crc/custom_crc32.c"
+-                            "../protocol/dji_protocol_parser.c"
+-                            "../protocol/dji_protocol_data_processor.c"
+-                            "../protocol/dji_protocol_data_descriptors.c"
+-                            "../protocol/dji_protocol_data_structures.c"
+-                            "../ble/ble.c"
+-                            "../data/data.c"
+-                            "../logic/connect_logic.c"
+-                            "../logic/command_logic.c"
+-                            "../logic/gps_logic.c"
+-                            "../logic/status_logic.c"
+-                            "../logic/enums_logic.c"
+-                            "../logic/key_logic.c"
+-                            "../logic/light_logic.c"
+-                            "../test/test_gps.c"
+-                    PRIV_REQUIRES bt nvs_flash esp_driver_uart esp_driver_gpio led_strip
+-                    INCLUDE_DIRS "." "../utils/crc" "../protocol" "../ble" "../data" "../logic" "../test")
++set(SRCS_LIST
++    "app_main.c"
++    "../utils/crc/custom_crc16.c"
++    "../utils/crc/custom_crc32.c"
++    "../protocol/dji_protocol_parser.c"
++    "../protocol/dji_protocol_data_processor.c"
++    "../protocol/dji_protocol_data_descriptors.c"
++    "../protocol/dji_protocol_data_structures.c"
++    "../ble/ble.c"
++    "../data/data.c"
++    "../logic/connect_logic.c"
++    "../logic/command_logic.c"
++    "../logic/status_logic.c"
++    "../logic/enums_logic.c"
++    "../logic/key_logic.c"
++    "../logic/light_logic.c"
++    "../logic/product_nvs.c"
++)
++
++if(CONFIG_ENABLE_GNSS)
++    list(APPEND SRCS_LIST
++        "../logic/gps_logic.c"
++        "../test/test_gps.c"
++    )
++endif()
++
++set(PRIV_REQUIRES_LIST bt nvs_flash esp_driver_gpio)
++if(CONFIG_ENABLE_GNSS)
++    list(APPEND PRIV_REQUIRES_LIST esp_driver_uart)
++endif()
++
++idf_component_register(
++    SRCS ${SRCS_LIST}
++    PRIV_REQUIRES ${PRIV_REQUIRES_LIST}
++    INCLUDE_DIRS "." "../utils/crc" "../protocol" "../ble" "../data" "../logic" "../test"
++)
+diff --git a/main/Kconfig.projbuild b/main/Kconfig.projbuild
+index f78a5e5..b695e6e 100644
+--- a/main/Kconfig.projbuild
++++ b/main/Kconfig.projbuild
+@@ -1,5 +1,13 @@
+ menu "Example Configuration"
+ 
++    config ENABLE_GNSS
++        bool "Enable GNSS (GPS) support and data push"
++        default n if IDF_TARGET_ESP32
++        default y
++        help
++            Enables LC76G GNSS UART + NMEA parsing and periodic GPS data push to the camera.
++            Disable this when building for hardware without an attached GNSS module.
++
+     config EXAMPLE_DUMP_ADV_DATA_AND_SCAN_RESP
+         bool "Dump whole adv data and scan response data in example"
+         default n
+diff --git a/main/app_main.c b/main/app_main.c
+index 77a63f2..9df6468 100644
+--- a/main/app_main.c
++++ b/main/app_main.c
+@@ -18,12 +18,20 @@
+  */
+ 
+ #include "freertos/FreeRTOS.h"
++#include "freertos/task.h"
++#include "esp_log.h"
+ 
+ #include "connect_logic.h"
+-#include "gps_logic.h"
+ #include "key_logic.h"
+ #include "light_logic.h"
++#include "product_config.h"
++
++#include "sdkconfig.h"
++
++#if CONFIG_ENABLE_GNSS
++#include "gps_logic.h"
+ #include "test_gps.h"
++#endif
+ 
+ /**
+  * @brief Main application function, performs initialization and task loop
+@@ -38,6 +46,7 @@
+ void app_main(void) {
+ 
+     int res = 0;
++    ESP_LOGI("APP", "DJI Osmo Action single-button remote v%s", PRODUCT_VERSION);
+ 
+     /* Initialize RGB light */
+     /* 初始化氛围灯 */
+@@ -48,9 +57,9 @@ void app_main(void) {
+ 
+     /* Initialize GPS module */
+     /* 初始化 GPS 模块 */
++#if CONFIG_ENABLE_GNSS
+     initSendGpsDataToCameraTask();
+-
+-    vTaskDelay(pdMS_TO_TICKS(2000));
++#endif
+ 
+     /* Initialize Bluetooth */
+     /* 初始化蓝牙 */
+diff --git a/main/idf_component.yml b/main/idf_component.yml
+deleted file mode 100644
+index 4dcbfc4..0000000
+--- a/main/idf_component.yml
++++ /dev/null
+@@ -1,2 +0,0 @@
+-dependencies:
+-  espressif/led_strip: "^2.4.1"
+\ No newline at end of file
